@@ -37,7 +37,7 @@ export function StartPage({
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 font-mono text-amber-400 px-6 py-12">
       <div className="text-center space-y-10 max-w-2xl w-full">
         <div className="space-y-3">
-          <h1 className="text-5xl font-bold tracking-widest drop-shadow-lg">
+          <h1 className="text-3xl sm:text-5xl font-bold tracking-widest drop-shadow-lg">
             TEXT ADVENTURE
           </h1>
           <p className="text-gray-500 text-sm tracking-wide">
@@ -89,9 +89,9 @@ export function StartPage({
               <button
                 key={story.id}
                 onClick={() => onNewGame(story.id, story.name)}
-                className="text-left border border-gray-800 rounded-xl p-5 bg-gray-900/30 hover:bg-gray-900/60 hover:border-amber-700/50 transition-all hover:shadow-lg hover:shadow-amber-900/10 group"
+                className="text-left border border-gray-800 rounded-xl p-4 sm:p-5 bg-gray-900/30 hover:bg-gray-900/60 hover:border-amber-700/50 transition-all hover:shadow-lg hover:shadow-amber-900/10 active:bg-gray-900/60 group"
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-1">
                   <h3 className="text-amber-400 font-bold group-hover:text-amber-300 transition-colors">
                     {story.name}
                   </h3>

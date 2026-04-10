@@ -49,11 +49,11 @@ export function EditorPage() {
       .replace(/^-|-$/g, "");
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200 font-mono px-6 py-10">
+    <div className="min-h-screen bg-gray-950 text-gray-200 font-mono px-4 sm:px-6 py-6 sm:py-10">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-8 sm:mb-10">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-amber-400 tracking-wide">
+            <h1 className="text-xl sm:text-2xl font-bold text-amber-400 tracking-wide">
               Story Editor
             </h1>
             <Link
@@ -77,7 +77,7 @@ export function EditorPage() {
               Create New Story
             </h2>
             {error && <p className="text-red-400 text-sm">{error}</p>}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <input
                 placeholder="Story name"
                 value={newStory.name}
@@ -144,10 +144,10 @@ export function EditorPage() {
             {stories.map((story) => (
               <div
                 key={story.id}
-                className="border border-gray-800 rounded-xl p-5 bg-gray-900/30 flex items-center justify-between hover:border-gray-700 transition-colors"
+                className="border border-gray-800 rounded-xl p-4 sm:p-5 bg-gray-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-gray-700 transition-colors"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-3">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <h3 className="text-amber-400 font-bold">{story.name}</h3>
                     <span
                       className={`text-xs px-2.5 py-0.5 rounded-full ${
@@ -164,7 +164,7 @@ export function EditorPage() {
                   </p>
                   <p className="text-gray-600 text-xs">by {story.author}</p>
                 </div>
-                <div className="flex gap-2 ml-4">
+                <div className="flex gap-2 shrink-0">
                   <Link
                     to={`/editor/${story.id}`}
                     className="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-sm"

@@ -32,8 +32,8 @@ export function GamePage() {
   }
 
   return (
-    <div className="h-screen flex">
-      <div className={`flex-1 ${showInventory ? "mr-64" : ""}`}>
+    <div className="h-[100dvh] flex">
+      <div className="flex-1">
         <Terminal
           output={game.output}
           onCommand={game.sendCommand}

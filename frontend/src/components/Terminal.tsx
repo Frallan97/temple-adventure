@@ -27,10 +27,10 @@ export function Terminal({
   }, [output]);
 
   return (
-    <div className="flex flex-col h-full bg-gray-950 font-mono text-sm">
+    <div className="flex flex-col h-[100dvh] bg-gray-950 font-mono text-sm">
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-3 px-5 py-4 scrollbar-thin"
+        className="flex-1 overflow-y-auto space-y-3 px-3 sm:px-5 py-4 scrollbar-thin"
       >
         {output.map((entry, i) => (
           <OutputLine
@@ -46,7 +46,7 @@ export function Terminal({
           </div>
         )}
       </div>
-      <div className="px-5 pb-4 pt-2">
+      <div className="px-3 sm:px-5 pb-[env(safe-area-inset-bottom,8px)] pt-2">
         <CommandInput
           onSubmit={onCommand}
           onNavigateHistory={onNavigateHistory}

@@ -46,7 +46,11 @@ export function CommandInput({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={disabled ? "..." : "Enter command..."}
-        className="flex-1 bg-transparent border-none outline-none text-green-400 caret-green-400 placeholder-gray-700 font-mono text-sm"
+        autoComplete="off"
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className="flex-1 bg-transparent border-none outline-none text-green-400 caret-green-400 placeholder-gray-700 font-mono text-base sm:text-sm py-1"
         autoFocus
       />
     </div>

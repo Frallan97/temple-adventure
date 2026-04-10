@@ -55,9 +55,9 @@ export function RoomEditor({ storyId, rooms, onReload, showStatus }: Props) {
   };
 
   return (
-    <div className="flex gap-6">
+    <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
       {/* Sidebar */}
-      <div className="w-52 space-y-2 shrink-0">
+      <div className="w-full sm:w-52 space-y-2 shrink-0">
         <div className="flex gap-1.5">
           <input
             value={newId}

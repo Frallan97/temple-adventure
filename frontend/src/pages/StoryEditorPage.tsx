@@ -94,18 +94,21 @@ export function StoryEditorPage() {
   return (
     <div className="min-h-screen bg-gray-950 text-gray-200 font-mono">
       {/* Header */}
-      <div className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="border-b border-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link
             to="/editor"
-            className="text-gray-500 hover:text-gray-400 transition-colors"
+            className="text-gray-500 hover:text-gray-400 transition-colors shrink-0"
           >
-            &larr; Stories
+            &larr;
+            <span className="hidden sm:inline"> Stories</span>
           </Link>
-          <div className="w-px h-5 bg-gray-800" />
-          <h1 className="text-lg text-amber-400 font-bold">{story.name}</h1>
+          <div className="hidden sm:block w-px h-5 bg-gray-800" />
+          <h1 className="text-base sm:text-lg text-amber-400 font-bold truncate">
+            {story.name}
+          </h1>
           <span
-            className={`text-xs px-2.5 py-0.5 rounded-full ${
+            className={`text-xs px-2.5 py-0.5 rounded-full shrink-0 ${
               story.is_published
                 ? "bg-green-900/30 text-green-400 border border-green-800/50"
                 : "bg-gray-800 text-gray-500 border border-gray-700"
@@ -114,21 +117,21 @@ export function StoryEditorPage() {
             {story.is_published ? "Published" : "Draft"}
           </span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {statusMsg && (
-            <span className="text-sm text-gray-400 animate-fade-in">
+            <span className="text-xs sm:text-sm text-gray-400 animate-fade-in truncate">
               {statusMsg}
             </span>
           )}
           <button
             onClick={handleValidate}
-            className="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+            className="bg-gray-800 border border-gray-600 text-gray-300 px-3 sm:px-4 py-1.5 rounded-lg hover:bg-gray-700 transition-colors text-sm shrink-0"
           >
             Validate
           </button>
           <button
             onClick={handlePublish}
-            className="bg-green-900/30 border border-green-700 text-green-400 px-4 py-1.5 rounded-lg hover:bg-green-900/50 transition-all text-sm"
+            className="bg-green-900/30 border border-green-700 text-green-400 px-3 sm:px-4 py-1.5 rounded-lg hover:bg-green-900/50 transition-all text-sm shrink-0"
           >
             Publish
           </button>
@@ -147,12 +150,12 @@ export function StoryEditorPage() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-800 px-6 flex gap-0">
+      <div className="border-b border-gray-800 px-4 sm:px-6 flex gap-0 overflow-x-auto scrollbar-none">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-5 py-3 text-sm border-b-2 transition-colors ${
+            className={`px-4 sm:px-5 py-3 text-sm border-b-2 transition-colors whitespace-nowrap ${
               tab === t.key
                 ? "border-amber-400 text-amber-400"
                 : "border-transparent text-gray-500 hover:text-gray-300"
@@ -169,7 +172,7 @@ export function StoryEditorPage() {
       </div>
 
       {/* Content */}
-      <div className="p-6 max-w-6xl">
+      <div className="p-4 sm:p-6 max-w-6xl">
         {tab === "settings" && (
           <StorySettings
             story={story}
