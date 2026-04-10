@@ -1,0 +1,172 @@
+items:
+  stone_tablet:
+    name: "stone tablet"
+    aliases: ["tablet", "glyphs", "inscription"]
+    description: "A weathered stone tablet covered in Inca glyphs. The carvings depict a sun, a mirror, and beams of light."
+    portable: true
+    interactions:
+      - verb: "examine"
+        conditions: []
+        effects: []
+        response: |
+          You study the tablet carefully. The glyphs tell a story:
+          "Turn the eye of Inti to release his gaze. Place the golden
+          reflection upon the altar. His light shall judge the worthy
+          and open the path below."
+          There's also a sequence of symbols: serpent, sun, serpent.
+
+  flint:
+    name: "piece of flint"
+    aliases: ["flint"]
+    description: "A sharp piece of flint. Could be useful for striking sparks."
+    portable: true
+    interactions: []
+
+  vine_rope:
+    name: "vine rope"
+    aliases: ["rope", "vine", "vines"]
+    description: "A sturdy length of vine that could serve as rope. It hangs from the temple entrance."
+    portable: true
+    interactions: []
+
+  glyph_panel:
+    name: "glyph panel"
+    aliases: ["panel", "carvings"]
+    description: "A panel of three rotating stone discs set into the wall beside the door. Each disc can be turned to show different symbols."
+    portable: false
+    interactions:
+      - verb: "use"
+        conditions:
+          - type: var_equals
+            key: "glyph_sequence_correct"
+            value: true
+        effects:
+          - type: set_var
+            key: "gate_open"
+            value: true
+          - type: unlock_connection
+            key: "entrance.north"
+            value: "sun_chamber"
+        response: |
+          You press the center of the panel. The discs lock into place with a
+          satisfying click. A deep rumble shakes the floor as the massive stone
+          door grinds open, revealing a dark passage leading north into the temple.
+        fail_response: "The panel doesn't respond. Perhaps the symbols need to be in the right sequence first."
+      - verb: "turn"
+        conditions:
+          - type: has_item
+            key: "stone_tablet"
+        effects:
+          - type: set_var
+            key: "glyph_sequence_correct"
+            value: true
+        response: |
+          Referencing the sequence on the stone tablet — serpent, sun, serpent —
+          you carefully rotate each disc to match. The symbols align with a
+          soft grinding sound. The panel seems ready to be activated.
+        fail_response: "You turn the discs randomly but nothing happens. Maybe you need a clue for the right sequence."
+
+  sun_disc:
+    name: "sun disc"
+    aliases: ["disc", "golden disc"]
+    description: "A large golden disc mounted on the ceiling mechanism. It depicts the face of Inti, the sun god. A hole in its center could focus light."
+    portable: false
+    interactions:
+      - verb: "turn"
+        conditions:
+          - type: var_equals
+            key: "beam_active"
+            value: false
+            negate: true
+        effects:
+          - type: set_var
+            key: "beam_active"
+            value: true
+          - type: set_var
+            key: "puzzle.light_puzzle.started"
+            value: true
+          - type: set_var
+            key: "puzzle.light_puzzle.start_turn"
+            value: "__CURRENT_TURN__"
+        response: |
+          You reach up and rotate the sun disc. It turns with surprising ease
+          for something so ancient. The hole in its center aligns with the
+          shaft of sunlight from above. A brilliant, focused beam of light
+          shoots down and strikes the pedestal in the center of the room.
+
+          You hear a faint rumbling from deep within the walls. Something
+          has been set in motion — you sense you should act quickly.
+        fail_response: ""
+      - verb: "turn"
+        conditions:
+          - type: var_equals
+            key: "beam_active"
+            value: true
+        effects: []
+        response: "The sun disc is already aligned. The beam of light shines steadily through its center."
+        fail_response: ""
+
+  mirror_pedestal:
+    name: "stone pedestal"
+    aliases: ["pedestal", "altar", "indent"]
+    description: "A stone pedestal in the center of the room with a circular indent on top, as if something should be placed there."
+    portable: false
+    interactions: []
+
+  golden_mirror:
+    name: "golden mirror"
+    aliases: ["mirror"]
+    description: "An ornate mirror with a polished golden surface. It catches and reflects light brilliantly."
+    portable: true
+    interactions:
+      - verb: "use"
+        conditions:
+          - type: in_room
+            key: "sun_chamber"
+          - type: var_equals
+            key: "beam_active"
+            value: true
+        effects:
+          - type: set_var
+            key: "mirror_placed"
+            value: true
+          - type: remove_item
+            key: "golden_mirror"
+        response: |
+          You place the golden mirror into the indent on the pedestal. It fits
+          perfectly. The beam of sunlight strikes the mirror's surface and
+          reflects in a blazing arc toward the stone face on the southern wall.
+        fail_response: ""
+      - verb: "use"
+        conditions:
+          - type: in_room
+            key: "sun_chamber"
+        effects: []
+        response: "There's no light to reflect. The mirror gleams dully in the darkness."
+        fail_response: ""
+
+  sun_crown:
+    name: "Sun Crown of the Inca"
+    aliases: ["crown", "headdress"]
+    description: "A magnificent golden headdress studded with emeralds and rubies. It radiates an almost supernatural warmth."
+    portable: true
+    interactions:
+      - verb: "take"
+        conditions: []
+        effects:
+          - type: set_var
+            key: "crown_taken"
+            value: true
+          - type: set_var
+            key: "game_won"
+            value: true
+          - type: set_status
+            key: ""
+            value: "completed"
+        response: |
+          You carefully lift the Sun Crown from the altar. It's heavier than
+          you expected, warm to the touch as if it still holds the heat of an
+          ancient sun. You've done it — the legendary Sun Crown of the Inca
+          is yours.
+
+          Congratulations, adventurer. You've conquered the Temple of the Sun!

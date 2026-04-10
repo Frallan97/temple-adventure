@@ -1,0 +1,60 @@
+id: light_puzzle
+name: "The Sun's Gaze"
+description: "Redirect the beam of sunlight to reveal the path to the treasure vault."
+steps:
+  - step_id: activate_beam
+    prompt: "A golden disc on the ceiling could focus the sunlight."
+    conditions:
+      - type: var_equals
+        key: "beam_active"
+        value: true
+    effects: []
+  - step_id: place_mirror
+    prompt: "The beam strikes the pedestal. Something reflective could redirect it."
+    conditions:
+      - type: var_equals
+        key: "mirror_placed"
+        value: true
+    effects:
+      - type: unlock_connection
+        key: "sun_chamber.down"
+        value: "treasure_vault"
+      - type: lock_connection
+        key: "treasure_vault.north"
+        value: ""
+      - type: unlock_connection
+        key: "treasure_vault.up"
+        value: "sun_chamber"
+
+timed_window:
+  start_trigger: "puzzle.light_puzzle.started"
+  turn_limit: 8
+
+failure_effects:
+  - type: move_player
+    key: ""
+    value: "entrance"
+  - type: lock_connection
+    key: "entrance.north"
+    value: ""
+  - type: set_var
+    key: "sun_chamber_collapsed"
+    value: true
+
+failure_text: |
+  The rumbling grows deafening! Cracks race across the ceiling of the Sun
+  Chamber. Ancient stones begin to fall. You barely manage to dive back through
+  the passage as the chamber collapses behind you in a thunderous roar of dust
+  and rubble.
+
+  You find yourself back at the temple entrance, coughing and covered in dust.
+  The passage north is completely sealed — tons of stone block the way.
+  The Sun Chamber is lost forever.
+
+completion_text: |
+  The reflected beam of sunlight strikes the hollow eyes of the stone face.
+  They blaze to life with golden light! A deep, resonant tone echoes through
+  the chamber as the floor beneath the stone face splits open, revealing a
+  narrow staircase descending into darkness below.
+
+  The rumbling stops. The mechanism is satisfied. The path to the vault is open.

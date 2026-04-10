@@ -1,0 +1,17 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Backend
+backend/build-errors.log
+backend/tmp/
+
+# IDE
+.vscode/
+.idea/
+*.sw?
+.DS_Store
+
+# Env
+.env
+.env.local

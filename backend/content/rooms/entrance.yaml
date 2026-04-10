@@ -1,0 +1,49 @@
+id: entrance
+name: "Temple Entrance"
+description: |
+  You stand before the gaping maw of an ancient Inca temple carved into the
+  mountainside. Weathered stone steps lead up to a massive doorway flanked by
+  two serpent statues. Vines and moss cover much of the facade, but the
+  craftsmanship beneath is unmistakable. A cool breeze flows from within,
+  carrying the scent of dust and ages past.
+
+  A heavy stone door blocks the passage north. Strange glyphs are carved
+  around its frame — they seem to depict a sequence of some kind.
+
+connections: {}
+
+items:
+  - stone_tablet
+  - flint
+  - vine_rope
+  - glyph_panel
+
+puzzles:
+  - gate_puzzle
+
+hints:
+  - condition:
+      type: var_equals
+      key: "gate_open"
+      value: true
+    text: "The gate is open. The passage leads north into the temple."
+  - condition:
+      type: var_equals
+      key: "glyph_sequence_correct"
+      value: true
+    text: "The glyphs are aligned. Try activating the panel."
+  - condition:
+      type: has_item
+      key: "stone_tablet"
+    text: "The tablet shows a sequence of symbols. Perhaps the glyph panel beside the door can be turned to match?"
+  - text: "There's a stone tablet near the entrance. It might hold a clue about the sealed door."
+
+conditional_descriptions:
+  - condition:
+      type: var_equals
+      key: "gate_open"
+      value: true
+    text: |
+      The massive stone door stands open, revealing a dark passage leading
+      north into the heart of the temple.
+    replace: false

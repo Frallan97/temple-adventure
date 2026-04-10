@@ -1,0 +1,53 @@
+id: sun_chamber
+name: "The Sun Chamber"
+description: |
+  You enter a vast circular chamber. The ceiling rises high above, and at its
+  apex a golden sun disc is mounted on a rotating mechanism. A narrow crack
+  in the ceiling allows a shaft of natural sunlight to penetrate the gloom.
+
+  The walls are lined with alcoves, each containing faded murals depicting
+  Inti, the sun god. On the southern wall, a massive stone face is carved —
+  its eyes are dark and hollow. A pedestal stands in the center of the room
+  with an empty circular indent.
+
+connections:
+  south: entrance
+
+items:
+  - sun_disc
+  - mirror_pedestal
+  - golden_mirror
+
+puzzles:
+  - light_puzzle
+
+hints:
+  - condition:
+      type: var_equals
+      key: "mirror_placed"
+      value: true
+    text: "The light illuminates a hidden passage. Look for a way down."
+  - condition:
+      type: var_equals
+      key: "beam_active"
+      value: true
+    text: "The beam of light hits the pedestal. If only you had something reflective to place there... Act quickly, you can feel the walls trembling."
+  - text: "The sun disc on the ceiling has a hole that could focus the sunlight. Try turning it."
+
+conditional_descriptions:
+  - condition:
+      type: var_equals
+      key: "beam_active"
+      value: true
+    text: |
+      A focused beam of sunlight now shines through the sun disc, striking
+      the pedestal in the center of the room.
+    replace: false
+  - condition:
+      type: var_equals
+      key: "mirror_placed"
+      value: true
+    text: |
+      The golden mirror on the pedestal catches the beam of light and
+      redirects it toward the stone face on the southern wall.
+    replace: false

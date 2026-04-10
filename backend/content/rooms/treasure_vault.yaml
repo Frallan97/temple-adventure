@@ -1,0 +1,35 @@
+id: treasure_vault
+name: "The Treasure Vault"
+description: |
+  You descend a narrow stone staircase into a chamber that takes your breath
+  away. Golden artifacts line the walls — ceremonial masks, jeweled daggers,
+  and ornate vessels that haven't seen light in centuries. At the center of
+  the vault, atop a stone altar, rests the legendary Sun Crown of the Inca —
+  a magnificent golden headdress studded with emeralds and rubies.
+
+  The air is thick with the weight of history. You've found it.
+
+connections:
+  north: sun_chamber
+
+items:
+  - sun_crown
+
+puzzles: []
+
+hints:
+  - condition:
+      type: var_equals
+      key: "crown_taken"
+      value: true
+    text: "You already claimed the Sun Crown. Victory is yours!"
+  - text: "The Sun Crown sits on the altar. Take it to claim your prize."
+
+conditional_descriptions:
+  - condition:
+      type: var_equals
+      key: "crown_taken"
+      value: true
+    text: |
+      The altar stands empty. The Sun Crown is yours.
+    replace: false

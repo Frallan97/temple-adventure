@@ -1,0 +1,23 @@
+id: gate_puzzle
+name: "The Serpent Gate"
+description: "Decipher the glyphs and open the stone door to enter the temple."
+steps:
+  - step_id: decipher_glyphs
+    prompt: "Strange glyphs surround the stone door."
+    conditions:
+      - type: var_equals
+        key: "glyph_sequence_correct"
+        value: true
+    effects: []
+  - step_id: open_gate
+    prompt: "The glyph panel seems ready."
+    conditions:
+      - type: var_equals
+        key: "gate_open"
+        value: true
+    effects: []
+
+timed_window: null
+failure_effects: []
+failure_text: ""
+completion_text: ""
