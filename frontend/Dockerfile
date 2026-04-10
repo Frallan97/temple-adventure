@@ -4,7 +4,7 @@ ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
-COPY index.html vite.config.ts tsconfig.json tsconfig.app.json ./
+COPY index.html vite.config.ts tsconfig.json ./
 COPY src/ src/
 COPY public/ public/
 RUN bun run build
