@@ -31,13 +31,13 @@ spec:
               value: "8080"
             - name: ENVIRONMENT
               value: "production"
-            - name: DATABASE_URL
-              value: "postgresql://postgres:$(DB_PASSWORD)@{{ include "temple-adventure.fullname" . }}-postgres:5432/temple_adventure?sslmode=disable"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "temple-adventure.fullname" . }}-secrets
                   key: DB_PASSWORD
+            - name: DATABASE_URL
+              value: "postgresql://postgres:$(DB_PASSWORD)@{{ include "temple-adventure.fullname" . }}-postgres:5432/temple_adventure?sslmode=disable"
             - name: ALLOWED_ORIGINS
               value: "https://{{ .Values.ingress.frontend.host }}"
             - name: CONTENT_DIR
