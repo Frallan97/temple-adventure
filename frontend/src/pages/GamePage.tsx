@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGame } from "../hooks/useGame";
 import { Terminal } from "../components/Terminal";
 import { InventoryPanel } from "../components/InventoryPanel";
+import { GameOverOverlay } from "../components/GameOverOverlay";
 import { StartPage } from "./StartPage";
 
 export function GamePage() {
@@ -20,6 +21,15 @@ export function GamePage() {
     setStarted(true);
   };
 
+  const handleMainMenu = () => {
+    setStarted(false);
+  };
+
+  const handleNewGameFromOverlay = () => {
+    game.clearGame();
+    setStarted(false);
+  };
+
   if (!started) {
     return (
       <StartPage
@@ -32,7 +42,7 @@ export function GamePage() {
   }
 
   return (
-    <div className="h-[100dvh] flex">
+    <div className="h-[100dvh] flex relative">
       <div className="flex-1">
         <Terminal
           output={game.output}
@@ -40,6 +50,7 @@ export function GamePage() {
           onNavigateHistory={game.navigateHistory}
           isLoading={game.isLoading}
           gameOver={game.gameOver}
+          onMainMenu={handleMainMenu}
         />
       </div>
       <InventoryPanel
@@ -49,6 +60,12 @@ export function GamePage() {
         isOpen={showInventory}
         onToggle={() => setShowInventory(!showInventory)}
       />
+      {game.gameOver && (
+        <GameOverOverlay
+          status={game.gameStatus}
+          onMainMenu={handleNewGameFromOverlay}
+        />
+      )}
     </div>
   );
 }

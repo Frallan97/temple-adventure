@@ -105,17 +105,6 @@ export function useGame() {
           gameOverRef.current = true;
           setGameOver(true);
           setGameStatus(resp.game_status);
-          if (resp.game_status === "completed") {
-            addOutput({
-              type: "system",
-              text: "\n=== YOU WIN! ===\nThank you for playing!",
-            });
-          } else {
-            addOutput({
-              type: "system",
-              text: "\n=== GAME OVER ===",
-            });
-          }
         }
       } catch (err) {
         addOutput({ type: "error", text: `Error: ${err}` });

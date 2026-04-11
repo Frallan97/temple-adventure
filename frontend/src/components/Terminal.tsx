@@ -9,6 +9,7 @@ interface TerminalProps {
   onNavigateHistory: (direction: "up" | "down") => string;
   isLoading: boolean;
   gameOver: boolean;
+  onMainMenu: () => void;
 }
 
 export function Terminal({
@@ -17,6 +18,7 @@ export function Terminal({
   onNavigateHistory,
   isLoading,
   gameOver,
+  onMainMenu,
 }: TerminalProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -28,6 +30,12 @@ export function Terminal({
 
   return (
     <div className="flex flex-col h-[100dvh] bg-gray-950 font-mono text-sm">
+      <button
+        onClick={onMainMenu}
+        className="fixed top-3 left-3 sm:top-4 sm:left-4 z-10 bg-gray-900/90 backdrop-blur text-gray-400 px-3 sm:px-4 py-1.5 rounded-lg border border-gray-700/80 hover:bg-gray-800 hover:border-gray-600 hover:text-gray-300 text-sm transition-all shadow-lg active:bg-gray-800"
+      >
+        Menu
+      </button>
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto space-y-3 px-3 sm:px-5 py-4 scrollbar-thin"
