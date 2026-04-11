@@ -99,11 +99,35 @@ export interface PuzzleDef {
   completion_text: string;
 }
 
+export interface DialogueLine {
+  topic: string;
+  conditions: Condition[];
+  response: string;
+  effects: Effect[];
+}
+
+export interface NpcMovement {
+  conditions: Condition[];
+  target_room: string;
+}
+
+export interface NpcDef {
+  id: string;
+  name: string;
+  description: string;
+  aliases: string[];
+  room: string;
+  dialogue: DialogueLine[];
+  movement: NpcMovement[];
+  conditional_descriptions: ConditionalText[];
+}
+
 export interface StoryResponse {
   story: Story;
   rooms: Record<string, RoomDef>;
   items: Record<string, ItemDef>;
   puzzles: Record<string, PuzzleDef>;
+  npcs: Record<string, NpcDef>;
 }
 
 export interface ValidateResponse {

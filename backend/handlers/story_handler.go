@@ -252,3 +252,39 @@ func (h *StoryHandler) DeletePuzzle(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+func (h *StoryHandler) UpsertNpc(w http.ResponseWriter, r *http.Request) {
+	storyID, err := uuid.Parse(chi.URLParam(r, "storyId"))
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid story ID")
+		return
+	}
+	npcID := chi.URLParam(r, "npcId")
+
+	var req models.UpsertNpcRequest
+	if err := DecodeJSON(r, &req); err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	if err := h.storyService.UpsertNpc(r.Context(), storyID, npcID, req); err != nil {
+		h.handleError(w, r, err, "Failed to upsert npc")
+		return
+	}
+	WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *StoryHandler) DeleteNpc(w http.ResponseWriter, r *http.Request) {
+	storyID, err := uuid.Parse(chi.URLParam(r, "storyId"))
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid story ID")
+		return
+	}
+	npcID := chi.URLParam(r, "npcId")
+
+	if err := h.storyService.DeleteNpc(r.Context(), storyID, npcID); err != nil {
+		h.handleError(w, r, err, "Failed to delete npc")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}

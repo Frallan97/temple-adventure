@@ -165,6 +165,18 @@ func ValidateSpec(spec *StorySpec) []string {
 		errs = append(errs, "at least one win_condition puzzle is required")
 	}
 
+	// Check NPCs
+	for npcID, npc := range spec.Npcs {
+		if npc.Name == "" {
+			errs = append(errs, fmt.Sprintf("npc %q: name is required", npcID))
+		}
+		if npc.Room == "" {
+			errs = append(errs, fmt.Sprintf("npc %q: room is required", npcID))
+		} else if _, ok := spec.Rooms[npc.Room]; !ok {
+			errs = append(errs, fmt.Sprintf("npc %q: references unknown room %q", npcID, npc.Room))
+		}
+	}
+
 	return errs
 }
 
@@ -312,7 +324,7 @@ func hasWinCondition(world *engine.WorldDefinition) bool {
 	return found
 }
 
-// walkEffects calls fn for every effect in the world (items + puzzles).
+// walkEffects calls fn for every effect in the world (items + puzzles + npcs).
 func walkEffects(world *engine.WorldDefinition, fn func(engine.Effect)) {
 	for _, item := range world.Items {
 		for _, inter := range item.Interactions {
@@ -329,6 +341,13 @@ func walkEffects(world *engine.WorldDefinition, fn func(engine.Effect)) {
 		}
 		for _, eff := range puzzle.FailureEffects {
 			fn(eff)
+		}
+	}
+	for _, npc := range world.Npcs {
+		for _, dl := range npc.Dialogue {
+			for _, eff := range dl.Effects {
+				fn(eff)
+			}
 		}
 	}
 }
@@ -360,6 +379,16 @@ func walkConditions(world *engine.WorldDefinition, fn func(engine.Condition)) {
 			for _, cond := range step.Conditions {
 				fn(cond)
 			}
+		}
+	}
+	for _, npc := range world.Npcs {
+		for _, dl := range npc.Dialogue {
+			for _, cond := range dl.Conditions {
+				fn(cond)
+			}
+		}
+		for _, cd := range npc.ConditionalDescriptions {
+			fn(cd.Condition)
 		}
 	}
 }

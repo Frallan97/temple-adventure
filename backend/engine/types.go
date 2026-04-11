@@ -6,6 +6,7 @@ type WorldDefinition struct {
 	Rooms   map[string]*RoomDef   `yaml:"rooms" json:"rooms"`
 	Items   map[string]*ItemDef   `yaml:"items" json:"items"`
 	Puzzles map[string]*PuzzleDef `yaml:"puzzles" json:"puzzles"`
+	Npcs    map[string]*NpcDef    `yaml:"npcs" json:"npcs"`
 }
 
 type RoomDef struct {
@@ -88,6 +89,31 @@ type Effect struct {
 	Value interface{} `yaml:"value" json:"value"`
 }
 
+// --- NPC definitions ---
+
+type NpcDef struct {
+	ID                      string            `yaml:"id" json:"id"`
+	Name                    string            `yaml:"name" json:"name"`
+	Description             string            `yaml:"description" json:"description"`
+	Aliases                 []string          `yaml:"aliases" json:"aliases"`
+	Room                    string            `yaml:"room" json:"room"`
+	Dialogue                []DialogueLine    `yaml:"dialogue" json:"dialogue"`
+	Movement                []NpcMovement     `yaml:"movement" json:"movement"`
+	ConditionalDescriptions []ConditionalText `yaml:"conditional_descriptions" json:"conditional_descriptions"`
+}
+
+type DialogueLine struct {
+	Topic      string      `yaml:"topic" json:"topic"`
+	Conditions []Condition `yaml:"conditions" json:"conditions"`
+	Response   string      `yaml:"response" json:"response"`
+	Effects    []Effect    `yaml:"effects" json:"effects"`
+}
+
+type NpcMovement struct {
+	Conditions []Condition `yaml:"conditions" json:"conditions"`
+	TargetRoom string      `yaml:"target_room" json:"target_room"`
+}
+
 // --- Runtime state (mutable, per-session) ---
 
 type WorldState struct {
@@ -98,6 +124,11 @@ type WorldState struct {
 	Inventory   map[string]bool
 	Variables   map[string]Variable
 	RoomStates  map[string]*RoomState
+	NpcStates   map[string]*NpcState
+}
+
+type NpcState struct {
+	CurrentRoom string
 }
 
 type Variable struct {

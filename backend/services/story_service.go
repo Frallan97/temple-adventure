@@ -51,6 +51,7 @@ func (s *StoryService) GetByID(ctx context.Context, id uuid.UUID) (*models.Story
 		Rooms:   world.Rooms,
 		Items:   world.Items,
 		Puzzles: world.Puzzles,
+		Npcs:    world.Npcs,
 	}, nil
 }
 
@@ -177,6 +178,22 @@ func (s *StoryService) UpsertPuzzle(ctx context.Context, storyID uuid.UUID, puzz
 
 func (s *StoryService) DeletePuzzle(ctx context.Context, storyID uuid.UUID, puzzleID string) error {
 	if err := s.repo.DeletePuzzle(ctx, storyID, puzzleID); err != nil {
+		return err
+	}
+	s.cache.Invalidate(storyID)
+	return nil
+}
+
+func (s *StoryService) UpsertNpc(ctx context.Context, storyID uuid.UUID, npcID string, req models.UpsertNpcRequest) error {
+	if err := s.repo.UpsertNpc(ctx, storyID, npcID, req); err != nil {
+		return err
+	}
+	s.cache.Invalidate(storyID)
+	return nil
+}
+
+func (s *StoryService) DeleteNpc(ctx context.Context, storyID uuid.UUID, npcID string) error {
+	if err := s.repo.DeleteNpc(ctx, storyID, npcID); err != nil {
 		return err
 	}
 	s.cache.Invalidate(storyID)

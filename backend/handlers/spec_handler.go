@@ -127,6 +127,7 @@ func (h *SpecHandler) saveStory(ctx context.Context, spec *storygen.StorySpec, w
 		"rooms":   world.Rooms,
 		"items":   world.Items,
 		"puzzles": world.Puzzles,
+		"npcs":    world.Npcs,
 	}, nil
 }
 

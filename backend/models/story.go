@@ -82,6 +82,16 @@ type UpsertPuzzleRequest struct {
 	CompletionText string              `json:"completion_text"`
 }
 
+type UpsertNpcRequest struct {
+	Name                    string                    `json:"name"`
+	Description             string                    `json:"description"`
+	Aliases                 []string                  `json:"aliases"`
+	Room                    string                    `json:"room"`
+	Dialogue                []engine.DialogueLine     `json:"dialogue"`
+	Movement                []engine.NpcMovement      `json:"movement"`
+	ConditionalDescriptions []engine.ConditionalText  `json:"conditional_descriptions"`
+}
+
 // --- API response types ---
 
 type StoryResponse struct {
@@ -89,6 +99,7 @@ type StoryResponse struct {
 	Rooms   map[string]*engine.RoomDef   `json:"rooms"`
 	Items   map[string]*engine.ItemDef   `json:"items"`
 	Puzzles map[string]*engine.PuzzleDef `json:"puzzles"`
+	Npcs    map[string]*engine.NpcDef    `json:"npcs"`
 }
 
 type StoryListResponse struct {

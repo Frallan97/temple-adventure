@@ -39,6 +39,7 @@ func LoadWorldDefinition(contentDir string) (*WorldDefinition, error) {
 		Rooms:   make(map[string]*RoomDef),
 		Items:   make(map[string]*ItemDef),
 		Puzzles: make(map[string]*PuzzleDef),
+		Npcs:    make(map[string]*NpcDef),
 	}
 
 	if err := loadRooms(filepath.Join(contentDir, "rooms"), world); err != nil {
@@ -181,6 +182,12 @@ func (wd *WorldDefinition) ValidateWithStartRoom(startRoom string) error {
 		}
 	}
 
+	for id, npc := range wd.Npcs {
+		if _, ok := wd.Rooms[npc.Room]; !ok {
+			return fmt.Errorf("npc %q references unknown room %q", id, npc.Room)
+		}
+	}
+
 	return nil
 }
 
@@ -197,6 +204,7 @@ func (wd *WorldDefinition) NewWorldState(sessionID string, startRoom ...string) 
 		Inventory:   make(map[string]bool),
 		Variables:   make(map[string]Variable),
 		RoomStates:  make(map[string]*RoomState),
+		NpcStates:   make(map[string]*NpcState),
 	}
 
 	for roomID := range wd.Rooms {
@@ -206,6 +214,10 @@ func (wd *WorldDefinition) NewWorldState(sessionID string, startRoom ...string) 
 			BlockedConnections: make(map[string]bool),
 			AddedConnections:   make(map[string]string),
 		}
+	}
+
+	for npcID, npc := range wd.Npcs {
+		state.NpcStates[npcID] = &NpcState{CurrentRoom: npc.Room}
 	}
 
 	return state

@@ -1,6 +1,9 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 func EvaluateCondition(state *WorldState, cond Condition) bool {
 	result := evaluateConditionInner(state, cond)
@@ -45,6 +48,19 @@ func evaluateConditionInner(state *WorldState, cond Condition) bool {
 	case "puzzle_complete":
 		v, ok := state.Variables["puzzle."+cond.Key+".complete"]
 		return ok && v.BoolVal
+
+	case "npc_in_room":
+		ns, ok := state.NpcStates[cond.Key]
+		if !ok {
+			return false
+		}
+		targetRoom := state.CurrentRoom
+		if cond.Value != nil {
+			if s := fmt.Sprintf("%v", cond.Value); s != "" {
+				targetRoom = s
+			}
+		}
+		return ns.CurrentRoom == targetRoom
 
 	default:
 		return false
@@ -121,6 +137,11 @@ func ApplyEffect(state *WorldState, effect Effect) {
 
 	case "set_status":
 		state.Status = fmt.Sprintf("%v", effect.Value)
+
+	case "move_npc":
+		if ns, ok := state.NpcStates[effect.Key]; ok {
+			ns.CurrentRoom = fmt.Sprintf("%v", effect.Value)
+		}
 	}
 }
 
@@ -281,4 +302,52 @@ func splitRoomDir(key string) (string, string) {
 		}
 	}
 	return key, ""
+}
+
+// --- NPC helpers ---
+
+// GetRoomNpcs returns the IDs of all NPCs currently in the given room.
+func GetRoomNpcs(state *WorldState, world *WorldDefinition, roomID string) []string {
+	var npcs []string
+	for npcID, ns := range state.NpcStates {
+		if ns.CurrentRoom == roomID {
+			npcs = append(npcs, npcID)
+		}
+	}
+	return npcs
+}
+
+// resolveNpcID finds an NPC by ID, name, or alias that is in the player's current room.
+func resolveNpcID(state *WorldState, world *WorldDefinition, target string) string {
+	if target == "" {
+		return ""
+	}
+	for npcID, ns := range state.NpcStates {
+		if ns.CurrentRoom != state.CurrentRoom {
+			continue
+		}
+		if matchesNpc(world, npcID, target) {
+			return npcID
+		}
+	}
+	return ""
+}
+
+func matchesNpc(world *WorldDefinition, npcID, target string) bool {
+	if strings.EqualFold(npcID, target) {
+		return true
+	}
+	npc, ok := world.Npcs[npcID]
+	if !ok {
+		return false
+	}
+	if strings.EqualFold(npc.Name, target) {
+		return true
+	}
+	for _, alias := range npc.Aliases {
+		if strings.EqualFold(alias, target) {
+			return true
+		}
+	}
+	return false
 }

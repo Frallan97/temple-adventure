@@ -1,0 +1,143 @@
+{
+  "title": "The Tavern Mystery",
+  "slug": "tavern-mystery",
+  "description": "A short adventure to test NPC interactions. Talk to the locals, gather clues, and find the hidden treasure.",
+  "author": "Claude",
+  "start_room": "tavern",
+  "rooms": {
+    "tavern": {
+      "name": "The Dusty Tavern",
+      "description": "A dimly lit tavern with creaking floorboards. The smell of ale and woodsmoke fills the air. A worn counter stretches along the back wall.",
+      "connections": {
+        "north": "alley",
+        "east": "cellar_entrance"
+      },
+      "items": ["notice_board", "ale"]
+    },
+    "alley": {
+      "name": "The Back Alley",
+      "description": "A narrow alley behind the tavern. Crates and barrels are stacked against the walls. Moonlight filters through the gap between buildings.",
+      "connections": {
+        "south": "tavern"
+      },
+      "items": ["crate", "old_key"]
+    },
+    "cellar_entrance": {
+      "name": "Cellar Entrance",
+      "description": "A heavy wooden door leads down into darkness. The air is cold and damp.",
+      "connections": {
+        "west": "tavern"
+      },
+      "items": ["cellar_door", "treasure_chest", "heirloom"]
+    }
+  },
+  "items": {
+    "notice_board": {
+      "name": "notice board",
+      "description": "A wooden board pinned with faded notices. One reads: 'REWARD - Lost heirloom, last seen in the cellar.'",
+      "aliases": ["board", "notices"],
+      "portable": false,
+      "examine_text": "Most notices are about missing cats and odd jobs. But one stands out - someone is offering gold for a family heirloom locked away in the tavern cellar."
+    },
+    "ale": {
+      "name": "mug of ale",
+      "description": "A foaming mug of ale sitting on the counter.",
+      "aliases": ["mug", "drink", "beer"],
+      "portable": true
+    },
+    "crate": {
+      "name": "wooden crate",
+      "description": "A sturdy wooden crate. Something might be hidden behind it.",
+      "aliases": ["crates", "box"],
+      "portable": false,
+      "examine_text": "You peer behind the crate and notice scratch marks on the wall, as if something was dragged here recently."
+    },
+    "old_key": {
+      "name": "rusty key",
+      "description": "An old iron key, coated in rust but still solid.",
+      "aliases": ["key", "iron key"],
+      "portable": true
+    },
+    "cellar_door": {
+      "name": "cellar door",
+      "description": "A heavy oak door with an iron lock. It looks sturdy.",
+      "aliases": ["door", "oak door"],
+      "portable": false
+    },
+    "treasure_chest": {
+      "name": "treasure chest",
+      "description": "A small wooden chest with ornate carvings. It's locked tight.",
+      "aliases": ["chest", "box"],
+      "portable": false
+    },
+    "heirloom": {
+      "name": "golden heirloom",
+      "description": "A beautiful golden locket on a fine chain. This must be the lost heirloom from the notice.",
+      "aliases": ["locket", "gold locket"],
+      "portable": true
+    }
+  },
+  "puzzles": [
+    {
+      "id": "cellar_lock",
+      "type": "key_lock",
+      "name": "Unlock the Cellar",
+      "description": "Use the rusty key to open the cellar door.",
+      "room": "cellar_entrance",
+      "key_item": "old_key",
+      "lock_target": "cellar_door",
+      "unlock_direction": "down",
+      "unlock_room": "cellar_entrance",
+      "completion_text": "The lock clicks open with a grinding sound. The cellar door swings inward.",
+      "lock_fail_text": "The door is locked. You need a key."
+    },
+    {
+      "id": "win_heirloom",
+      "type": "win_condition",
+      "name": "Recover the Heirloom",
+      "room": "cellar_entrance",
+      "win_item": "heirloom",
+      "win_verb": "take",
+      "win_text": "You pick up the golden locket. The lost heirloom! The barkeep will be thrilled. You've solved the tavern mystery!"
+    }
+  ],
+  "npcs": {
+    "barkeep": {
+      "name": "Barkeep",
+      "description": "A burly man with a thick beard and kind eyes. He polishes a glass absentmindedly while watching the room.",
+      "aliases": ["bartender", "innkeeper", "keeper"],
+      "room": "tavern",
+      "greeting": "Welcome, stranger! Take a seat. You look like someone who could use a drink... and maybe a job. Check the notice board if you're interested.",
+      "topics": {
+        "heirloom": "My grandmother's locket went missing weeks ago. I think the old caretaker hid it in the cellar before he vanished. But I lost the key somewhere out back.",
+        "key": "I had an old iron key for the cellar, but I dropped it in the alley behind the tavern. Haven't had time to look for it.",
+        "cellar": "The cellar's been locked up for months. Nobody goes down there anymore. If you find the key, you're welcome to take a look.",
+        "caretaker": "Old Morven used to look after the place. Disappeared one night without a word. Shady fellow, if you ask me.",
+        "drink": "Ha! Help yourself to the ale on the counter. On the house."
+      }
+    },
+    "cat": {
+      "name": "Tabby Cat",
+      "description": "A scruffy orange tabby cat. It watches you with half-closed eyes, tail flicking lazily.",
+      "aliases": ["tabby", "kitty", "feline"],
+      "room": "alley",
+      "greeting": "The cat meows and rubs against your leg. It seems to want attention... or food.",
+      "topics": {
+        "key": "The cat paws at the ground near the crates and meows insistently. Maybe there's something hidden there.",
+        "food": "The cat's ears perk up at the mention of food. It looks toward the tavern hopefully."
+      }
+    },
+    "ghost": {
+      "name": "Ghostly Figure",
+      "description": "A translucent, shimmering figure in old servant's clothes. It flickers in and out of visibility.",
+      "aliases": ["spirit", "phantom", "morven"],
+      "room": "cellar_entrance",
+      "greeting": "The ghostly figure turns to face you. 'So... someone finally came. I am Morven. I didn't steal the locket - I was trying to protect it. Open the chest and return it to its rightful owner.'",
+      "topics": {
+        "locket": "The ghost sighs. 'The locket holds more than sentimental value. It belonged to the barkeep's grandmother, a woman of great wisdom. Keep it safe.'",
+        "chest": "'The chest holds the heirloom. Use the key and take it back upstairs. My task here is done.'",
+        "morven": "'I was the caretaker here for twenty years. When I discovered someone was trying to steal the locket, I hid it. But the effort... cost me everything.'"
+      }
+    }
+  }
+}

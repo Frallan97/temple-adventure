@@ -243,6 +243,7 @@ func (s *GameService) loadWorldState(ctx context.Context, sessionID uuid.UUID) (
 		Inventory:   make(map[string]bool),
 		Variables:   make(map[string]engine.Variable),
 		RoomStates:  make(map[string]*engine.RoomState),
+		NpcStates:   make(map[string]*engine.NpcState),
 	}
 
 	for roomID := range eng.World.Rooms {
@@ -252,6 +253,10 @@ func (s *GameService) loadWorldState(ctx context.Context, sessionID uuid.UUID) (
 			BlockedConnections: make(map[string]bool),
 			AddedConnections:   make(map[string]string),
 		}
+	}
+
+	for npcID, npc := range eng.World.Npcs {
+		state.NpcStates[npcID] = &engine.NpcState{CurrentRoom: npc.Room}
 	}
 
 	// Load inventory
@@ -303,6 +308,7 @@ func (s *GameService) loadWorldState(ctx context.Context, sessionID uuid.UUID) (
 	}
 
 	s.reconstructRoomStates(state)
+	s.reconstructNpcStates(state)
 
 	return state, eng, nil
 }
@@ -357,6 +363,18 @@ func (s *GameService) reconstructRoomStates(state *engine.WorldState) {
 	}
 }
 
+func (s *GameService) reconstructNpcStates(state *engine.WorldState) {
+	for key, v := range state.Variables {
+		if !strings.HasPrefix(key, "npc_room.") {
+			continue
+		}
+		npcID := key[len("npc_room."):]
+		if ns, ok := state.NpcStates[npcID]; ok {
+			ns.CurrentRoom = v.StrVal
+		}
+	}
+}
+
 func (s *GameService) syncInventory(ctx context.Context, tx *sql.Tx, sessionID uuid.UUID, state *engine.WorldState) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM session_inventory WHERE session_id = $1`, sessionID)
 	if err != nil {
@@ -383,6 +401,9 @@ func (s *GameService) syncVariables(ctx context.Context, tx *sql.Tx, sessionID u
 
 	for key, v := range state.Variables {
 		if len(key) >= 11 && key[:11] == "room_state." {
+			continue
+		}
+		if strings.HasPrefix(key, "npc_room.") {
 			continue
 		}
 		var valBool *bool
@@ -449,6 +470,18 @@ func (s *GameService) syncVariables(ctx context.Context, tx *sql.Tx, sessionID u
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	// Persist NPC positions
+	for npcID, ns := range state.NpcStates {
+		key := fmt.Sprintf("npc_room.%s", npcID)
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO session_variables (session_id, var_key, var_type, val_string) VALUES ($1, $2, 'string', $3)`,
+			sessionID, key, ns.CurrentRoom,
+		)
+		if err != nil {
+			return err
 		}
 	}
 

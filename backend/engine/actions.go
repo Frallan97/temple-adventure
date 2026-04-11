@@ -14,6 +14,8 @@ func RegisterBuiltinActions(registry *CommandRegistry) {
 	registry.Register("inventory", actionInventory)
 	registry.Register("help", actionHelp)
 	registry.Register("hint", actionHint)
+	registry.Register("talk", actionTalk)
+	registry.Register("ask", actionAsk)
 }
 
 func actionLook(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
@@ -32,6 +34,11 @@ func actionLook(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *
 func actionExamine(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
 	itemID := resolveItemID(state, world, cmd.Target)
 	if itemID == "" {
+		// Try NPC
+		npcID := resolveNpcID(state, world, cmd.Target)
+		if npcID != "" {
+			return examineNpc(state, world, npcID)
+		}
 		return &CommandResult{
 			Text:       fmt.Sprintf("You don't see '%s' here.", cmd.Target),
 			GameStatus: state.Status,
@@ -61,6 +68,27 @@ func actionExamine(state *WorldState, world *WorldDefinition, cmd *ParsedCommand
 				if interaction.Response != "" {
 					desc = interaction.Response
 				}
+			}
+		}
+	}
+
+	return &CommandResult{
+		Text:       desc,
+		GameStatus: state.Status,
+		TurnNumber: state.TurnNumber,
+	}
+}
+
+func examineNpc(state *WorldState, world *WorldDefinition, npcID string) *CommandResult {
+	npc := world.Npcs[npcID]
+	desc := npc.Description
+
+	for _, cd := range npc.ConditionalDescriptions {
+		if EvaluateCondition(state, cd.Condition) {
+			if cd.Replace {
+				desc = cd.Text
+			} else {
+				desc = desc + "\n" + cd.Text
 			}
 		}
 	}
@@ -304,18 +332,113 @@ func actionHint(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *
 func actionHelp(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
 	return &CommandResult{
 		Text: `Available commands:
-  look          - Describe your surroundings
-  look <item>   - Examine an item
-  move <dir>    - Move in a direction (north, south, east, west, up, down)
-  take <item>   - Pick up an item
-  drop <item>   - Drop an item
-  use <item>    - Use an item
-  inventory     - List what you're carrying
-  hint          - Get a hint for what to do next
-  help          - Show this help
+  look              - Describe your surroundings
+  look <item/npc>   - Examine an item or NPC
+  move <dir>        - Move in a direction (north, south, east, west, up, down)
+  take <item>       - Pick up an item
+  drop <item>       - Drop an item
+  use <item>        - Use an item
+  talk <npc>        - Talk to an NPC
+  ask <npc> about <topic> - Ask an NPC about a topic
+  inventory         - List what you're carrying
+  hint              - Get a hint for what to do next
+  help              - Show this help
 
 Shortcuts: n/s/e/w (directions), i (inventory), l (look)
 You can also try: push, pull, turn, open on objects in the room.`,
+		GameStatus: state.Status,
+		TurnNumber: state.TurnNumber,
+	}
+}
+
+func actionTalk(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
+	if cmd.Target == "" {
+		return &CommandResult{
+			Text:       "Talk to whom?",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	npcID := resolveNpcID(state, world, cmd.Target)
+	if npcID == "" {
+		return &CommandResult{
+			Text:       fmt.Sprintf("You don't see '%s' here.", cmd.Target),
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	npc := world.Npcs[npcID]
+	for _, dl := range npc.Dialogue {
+		if dl.Topic != "" {
+			continue
+		}
+		if EvaluateConditions(state, dl.Conditions) {
+			ApplyEffects(state, dl.Effects)
+			return &CommandResult{
+				Text:       dl.Response,
+				GameStatus: state.Status,
+				TurnNumber: state.TurnNumber,
+			}
+		}
+	}
+
+	return &CommandResult{
+		Text:       fmt.Sprintf("The %s doesn't seem interested in talking right now.", npc.Name),
+		GameStatus: state.Status,
+		TurnNumber: state.TurnNumber,
+	}
+}
+
+func actionAsk(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
+	if cmd.Target == "" {
+		return &CommandResult{
+			Text:       "Ask whom about what?",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	// Parse "npc about topic"
+	parts := strings.SplitN(cmd.Target, " about ", 2)
+	if len(parts) < 2 {
+		return &CommandResult{
+			Text:       "Ask whom about what? Usage: ask <npc> about <topic>",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	npcRef := strings.TrimSpace(parts[0])
+	topic := strings.TrimSpace(parts[1])
+
+	npcID := resolveNpcID(state, world, npcRef)
+	if npcID == "" {
+		return &CommandResult{
+			Text:       fmt.Sprintf("You don't see '%s' here.", npcRef),
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	npc := world.Npcs[npcID]
+	for _, dl := range npc.Dialogue {
+		if !strings.EqualFold(dl.Topic, topic) {
+			continue
+		}
+		if EvaluateConditions(state, dl.Conditions) {
+			ApplyEffects(state, dl.Effects)
+			return &CommandResult{
+				Text:       dl.Response,
+				GameStatus: state.Status,
+				TurnNumber: state.TurnNumber,
+			}
+		}
+	}
+
+	return &CommandResult{
+		Text:       fmt.Sprintf("The %s doesn't have anything to say about that.", npc.Name),
 		GameStatus: state.Status,
 		TurnNumber: state.TurnNumber,
 	}
@@ -355,6 +478,20 @@ func describeRoom(state *WorldState, world *WorldDefinition) string {
 		}
 		if len(itemNames) > 0 {
 			desc += "\n\nYou can see: " + strings.Join(itemNames, ", ") + "."
+		}
+	}
+
+	// List NPCs present
+	npcIDs := GetRoomNpcs(state, world, state.CurrentRoom)
+	if len(npcIDs) > 0 {
+		var npcNames []string
+		for _, npcID := range npcIDs {
+			if def, ok := world.Npcs[npcID]; ok {
+				npcNames = append(npcNames, def.Name)
+			}
+		}
+		if len(npcNames) > 0 {
+			desc += "\n\nPresent: " + strings.Join(npcNames, ", ") + "."
 		}
 	}
 

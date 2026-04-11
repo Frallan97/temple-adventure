@@ -26,6 +26,8 @@ var verbAliases = map[string]string{
 	"?":       "help",
 	"h":       "hint",
 	"clue":    "hint",
+	"speak":   "talk",
+	"chat":    "talk",
 }
 
 type CommandParser struct{}

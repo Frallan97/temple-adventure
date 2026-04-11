@@ -67,6 +67,20 @@ func (e *Engine) ProcessCommand(state *WorldState, rawInput string) *CommandResu
 	// Execute the command
 	result := e.registry.Execute(state, e.World, cmd)
 
+	// Evaluate NPC movement rules
+	for _, npc := range e.World.Npcs {
+		ns := state.NpcStates[npc.ID]
+		if ns == nil {
+			continue
+		}
+		for _, mv := range npc.Movement {
+			if EvaluateConditions(state, mv.Conditions) {
+				ns.CurrentRoom = mv.TargetRoom
+				break
+			}
+		}
+	}
+
 	// Check puzzle progress after the command
 	puzzleText := e.puzzles.CheckPuzzleProgress(state)
 	if puzzleText != "" {

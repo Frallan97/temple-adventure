@@ -47,6 +47,8 @@ func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *Sto
 			r.Delete("/items/{itemId}", storyHandler.DeleteItem)
 			r.Put("/puzzles/{puzzleId}", storyHandler.UpsertPuzzle)
 			r.Delete("/puzzles/{puzzleId}", storyHandler.DeletePuzzle)
+			r.Put("/npcs/{npcId}", storyHandler.UpsertNpc)
+			r.Delete("/npcs/{npcId}", storyHandler.DeleteNpc)
 		})
 	})
 

@@ -439,3 +439,41 @@ func assertContains(t *testing.T, errs []string, substr string) {
 	}
 	t.Errorf("expected error containing %q, got: %v", substr, errs)
 }
+
+func TestValidateSpecNpcValid(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"merchant": {Name: "Merchant", Room: "room1"},
+	}
+	errs := ValidateSpec(spec)
+	if len(errs) > 0 {
+		t.Errorf("expected no errors for valid NPC, got: %v", errs)
+	}
+}
+
+func TestValidateSpecNpcBadRoom(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"merchant": {Name: "Merchant", Room: "nonexistent"},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "unknown room")
+}
+
+func TestValidateSpecNpcNoName(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"merchant": {Room: "room1"},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "name is required")
+}
+
+func TestValidateSpecNpcNoRoom(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"merchant": {Name: "Merchant"},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "room is required")
+}

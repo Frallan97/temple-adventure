@@ -14,11 +14,13 @@ func Expand(spec *StorySpec) (*engine.WorldDefinition, error) {
 			Rooms:   make(map[string]*engine.RoomDef),
 			Items:   make(map[string]*engine.ItemDef),
 			Puzzles: make(map[string]*engine.PuzzleDef),
+			Npcs:    make(map[string]*engine.NpcDef),
 		},
 	}
 
 	e.buildRooms()
 	e.buildItems()
+	e.buildNpcs()
 
 	for i := range spec.Puzzles {
 		ps := &spec.Puzzles[i]
@@ -88,6 +90,31 @@ func (e *expander) buildItems() {
 			})
 		}
 		e.world.Items[id] = item
+	}
+}
+
+func (e *expander) buildNpcs() {
+	for id, ns := range e.spec.Npcs {
+		npc := &engine.NpcDef{
+			ID:          id,
+			Name:        ns.Name,
+			Description: ns.Description,
+			Aliases:     append([]string{}, ns.Aliases...),
+			Room:        ns.Room,
+		}
+		if ns.Greeting != "" {
+			npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
+				Topic:    "",
+				Response: ns.Greeting,
+			})
+		}
+		for topic, response := range ns.Topics {
+			npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
+				Topic:    topic,
+				Response: response,
+			})
+		}
+		e.world.Npcs[id] = npc
 	}
 }
 

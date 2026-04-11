@@ -11,6 +11,7 @@ type StorySpec struct {
 	Rooms       map[string]RoomSpec `json:"rooms"`
 	Items       map[string]ItemSpec `json:"items"`
 	Puzzles     []PuzzleSpec        `json:"puzzles"`
+	Npcs        map[string]NpcSpec  `json:"npcs,omitempty"`
 }
 
 // RoomSpec defines a room in simplified form.
@@ -108,6 +109,16 @@ type FailureEffectSpec struct {
 	Type      string `json:"type"`                // "move_player" or "lock_connection"
 	Room      string `json:"room,omitempty"`       // target room for move_player
 	Direction string `json:"direction,omitempty"`  // direction for lock_connection
+}
+
+// NpcSpec defines an NPC in simplified form.
+type NpcSpec struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Aliases     []string          `json:"aliases"`
+	Room        string            `json:"room"`
+	Greeting    string            `json:"greeting,omitempty"`
+	Topics      map[string]string `json:"topics,omitempty"`
 }
 
 // Reverse direction mapping for bidirectional connections.

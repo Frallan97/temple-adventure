@@ -874,3 +874,108 @@ func templeStorySpec() *StorySpec {
 		},
 	}
 }
+
+func TestExpandNpcs(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "hall",
+		Rooms: map[string]RoomSpec{
+			"hall": {Name: "Hall", Description: "A grand hall.", Items: []string{"crown"}},
+		},
+		Items: map[string]ItemSpec{
+			"crown": {Name: "Crown", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Name: "Win", Room: "hall", WinItem: "crown", WinText: "You win!"},
+		},
+		Npcs: map[string]NpcSpec{
+			"merchant": {
+				Name:        "Merchant",
+				Description: "A traveling merchant.",
+				Aliases:     []string{"trader"},
+				Room:        "hall",
+				Greeting:    "Hello there!",
+				Topics: map[string]string{
+					"prices": "Everything is cheap!",
+					"rumors": "I've heard strange things...",
+				},
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	npc := world.Npcs["merchant"]
+	if npc == nil {
+		t.Fatal("NPC merchant not created")
+	}
+	if npc.Name != "Merchant" {
+		t.Errorf("expected name Merchant, got %s", npc.Name)
+	}
+	if npc.Room != "hall" {
+		t.Errorf("expected room hall, got %s", npc.Room)
+	}
+	if len(npc.Aliases) != 1 || npc.Aliases[0] != "trader" {
+		t.Errorf("unexpected aliases: %v", npc.Aliases)
+	}
+
+	// Should have greeting + 2 topics = 3 dialogue lines
+	if len(npc.Dialogue) != 3 {
+		t.Fatalf("expected 3 dialogue lines, got %d", len(npc.Dialogue))
+	}
+
+	// Check greeting
+	hasGreeting := false
+	for _, dl := range npc.Dialogue {
+		if dl.Topic == "" && dl.Response == "Hello there!" {
+			hasGreeting = true
+		}
+	}
+	if !hasGreeting {
+		t.Error("expected greeting dialogue line")
+	}
+
+	// Check topics
+	hasPrices := false
+	hasRumors := false
+	for _, dl := range npc.Dialogue {
+		if dl.Topic == "prices" {
+			hasPrices = true
+		}
+		if dl.Topic == "rumors" {
+			hasRumors = true
+		}
+	}
+	if !hasPrices {
+		t.Error("expected prices topic")
+	}
+	if !hasRumors {
+		t.Error("expected rumors topic")
+	}
+}
+
+func TestExpandNpcsEmpty(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "hall",
+		Rooms: map[string]RoomSpec{
+			"hall": {Name: "Hall", Description: "A hall.", Items: []string{"crown"}},
+		},
+		Items: map[string]ItemSpec{
+			"crown": {Name: "Crown", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Name: "Win", Room: "hall", WinItem: "crown", WinText: "You win!"},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	if len(world.Npcs) != 0 {
+		t.Errorf("expected 0 NPCs, got %d", len(world.Npcs))
+	}
+}

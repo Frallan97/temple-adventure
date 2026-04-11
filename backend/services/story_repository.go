@@ -244,6 +244,39 @@ func (r *StoryRepository) DeletePuzzle(ctx context.Context, storyID uuid.UUID, p
 	return nil
 }
 
+// --- NPC CRUD ---
+
+func (r *StoryRepository) UpsertNpc(ctx context.Context, storyID uuid.UUID, npcID string, req models.UpsertNpcRequest) error {
+	aliases, _ := json.Marshal(req.Aliases)
+	dialogue, _ := json.Marshal(req.Dialogue)
+	movement, _ := json.Marshal(req.Movement)
+	condDescs, _ := json.Marshal(req.ConditionalDescriptions)
+
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO story_npcs (story_id, npc_id, name, description, aliases, room, dialogue, movement, conditional_descriptions)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 ON CONFLICT (story_id, npc_id) DO UPDATE SET
+		   name = EXCLUDED.name, description = EXCLUDED.description, aliases = EXCLUDED.aliases,
+		   room = EXCLUDED.room, dialogue = EXCLUDED.dialogue, movement = EXCLUDED.movement,
+		   conditional_descriptions = EXCLUDED.conditional_descriptions`,
+		storyID, npcID, req.Name, req.Description, aliases, req.Room, dialogue, movement, condDescs,
+	)
+	return err
+}
+
+func (r *StoryRepository) DeleteNpc(ctx context.Context, storyID uuid.UUID, npcID string) error {
+	result, err := r.db.ExecContext(ctx,
+		`DELETE FROM story_npcs WHERE story_id = $1 AND npc_id = $2`, storyID, npcID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return models.NewNotFoundError("npc")
+	}
+	return nil
+}
+
 // --- Load as WorldDefinition ---
 
 func (r *StoryRepository) LoadWorldDefinition(ctx context.Context, storyID uuid.UUID) (*engine.WorldDefinition, error) {
@@ -251,6 +284,7 @@ func (r *StoryRepository) LoadWorldDefinition(ctx context.Context, storyID uuid.
 		Rooms:   make(map[string]*engine.RoomDef),
 		Items:   make(map[string]*engine.ItemDef),
 		Puzzles: make(map[string]*engine.PuzzleDef),
+		Npcs:    make(map[string]*engine.NpcDef),
 	}
 
 	// Load rooms
@@ -352,6 +386,37 @@ func (r *StoryRepository) LoadWorldDefinition(ctx context.Context, storyID uuid.
 		world.Puzzles[puzzleID] = puzzle
 	}
 
+	// Load NPCs
+	npcRows, err := r.db.QueryContext(ctx,
+		`SELECT npc_id, name, description, aliases, room, dialogue, movement, conditional_descriptions
+		 FROM story_npcs WHERE story_id = $1`, storyID)
+	if err != nil {
+		return nil, fmt.Errorf("loading npcs: %w", err)
+	}
+	defer npcRows.Close()
+
+	for npcRows.Next() {
+		var npcID, name, desc, room string
+		var aliasesJSON, dialogueJSON, movementJSON, condDescsJSON []byte
+
+		if err := npcRows.Scan(&npcID, &name, &desc, &aliasesJSON, &room, &dialogueJSON, &movementJSON, &condDescsJSON); err != nil {
+			return nil, fmt.Errorf("scanning npc: %w", err)
+		}
+
+		npc := &engine.NpcDef{
+			ID:          npcID,
+			Name:        name,
+			Description: desc,
+			Room:        room,
+		}
+		json.Unmarshal(aliasesJSON, &npc.Aliases)
+		json.Unmarshal(dialogueJSON, &npc.Dialogue)
+		json.Unmarshal(movementJSON, &npc.Movement)
+		json.Unmarshal(condDescsJSON, &npc.ConditionalDescriptions)
+
+		world.Npcs[npcID] = npc
+	}
+
 	return world, nil
 }
 
@@ -416,6 +481,27 @@ func (r *StoryRepository) SaveWorldDefinition(ctx context.Context, tx *sql.Tx, s
 		)
 		if err != nil {
 			return fmt.Errorf("inserting puzzle %s: %w", puzzleID, err)
+		}
+	}
+
+	for npcID, npc := range world.Npcs {
+		aliases, _ := json.Marshal(npc.Aliases)
+		dialogue, _ := json.Marshal(npc.Dialogue)
+		movement, _ := json.Marshal(npc.Movement)
+		condDescs, _ := json.Marshal(npc.ConditionalDescriptions)
+
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO story_npcs (story_id, npc_id, name, description, aliases, room, dialogue, movement, conditional_descriptions)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 ON CONFLICT (story_id, npc_id) DO UPDATE SET
+			   name = EXCLUDED.name, description = EXCLUDED.description,
+			   aliases = EXCLUDED.aliases, room = EXCLUDED.room,
+			   dialogue = EXCLUDED.dialogue, movement = EXCLUDED.movement,
+			   conditional_descriptions = EXCLUDED.conditional_descriptions`,
+			storyID, npcID, npc.Name, npc.Description, aliases, npc.Room, dialogue, movement, condDescs,
+		)
+		if err != nil {
+			return fmt.Errorf("inserting npc %s: %w", npcID, err)
 		}
 	}
 

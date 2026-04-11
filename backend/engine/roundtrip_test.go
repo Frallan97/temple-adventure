@@ -42,6 +42,12 @@ func simulateRoundTrip(t *testing.T, eng *Engine, state *WorldState) *WorldState
 		}
 	}
 
+	// Serialize NPC positions (like syncVariables does)
+	for npcID, ns := range state.NpcStates {
+		key := "npc_room." + npcID
+		variables[key] = Variable{Type: "string", StrVal: ns.CurrentRoom}
+	}
+
 	// Reconstruct: build fresh state from serialized data (like loadWorldState does)
 	newState := eng.World.NewWorldState(state.SessionID)
 	newState.CurrentRoom = state.CurrentRoom
@@ -52,6 +58,7 @@ func simulateRoundTrip(t *testing.T, eng *Engine, state *WorldState) *WorldState
 	// Load variables and reconstruct room states (like reconstructRoomStates does)
 	newState.Variables = variables
 	reconstructRoomStatesFromVars(newState)
+	reconstructNpcStatesFromVars(newState)
 
 	return newState
 }
@@ -95,6 +102,19 @@ func reconstructRoomStatesFromVars(state *WorldState) {
 			}
 		} else if len(remainder) > len("added_conn.") && remainder[:len("added_conn.")] == "added_conn." {
 			rs.AddedConnections[remainder[len("added_conn."):]] = v.StrVal
+		}
+	}
+}
+
+// reconstructNpcStatesFromVars mirrors the service's reconstructNpcStates logic.
+func reconstructNpcStatesFromVars(state *WorldState) {
+	for key, v := range state.Variables {
+		if !strings.HasPrefix(key, "npc_room.") {
+			continue
+		}
+		npcID := key[len("npc_room."):]
+		if ns, ok := state.NpcStates[npcID]; ok {
+			ns.CurrentRoom = v.StrVal
 		}
 	}
 }
@@ -470,5 +490,52 @@ func TestNonPortableItems(t *testing.T) {
 	result = step("take disc")
 	if !strings.Contains(result.Text, "can't pick up") {
 		t.Fatalf("should not be able to take sun disc, got: %s", result.Text)
+	}
+}
+
+// TestRoundTripNpcState verifies that NPC positions survive round-trips.
+func TestRoundTripNpcState(t *testing.T) {
+	world := npcTestWorld()
+	eng := NewEngineFromWorld(world)
+	state := eng.World.NewWorldState("test", "tavern")
+
+	step := func(input string) *CommandResult {
+		t.Helper()
+		result := eng.ProcessCommand(state, input)
+		state = simulateRoundTrip(t, eng, state)
+		return result
+	}
+
+	// Guard starts in market
+	if state.NpcStates["guard"].CurrentRoom != "market" {
+		t.Fatal("guard should start in market")
+	}
+
+	// Round-trip should preserve guard position
+	state = simulateRoundTrip(t, eng, state)
+	if state.NpcStates["guard"].CurrentRoom != "market" {
+		t.Fatal("guard should still be in market after round-trip")
+	}
+
+	// Move guard via effect
+	ApplyEffect(state, Effect{Type: "move_npc", Key: "guard", Value: "tavern"})
+	state = simulateRoundTrip(t, eng, state)
+	if state.NpcStates["guard"].CurrentRoom != "tavern" {
+		t.Fatalf("guard should be in tavern after move and round-trip, got %s", state.NpcStates["guard"].CurrentRoom)
+	}
+
+	// Guard should appear in tavern description after round-trip
+	result := step("look")
+	if !strings.Contains(result.Text, "Guard") {
+		t.Errorf("Guard should appear in tavern after round-trip, got: %s", result.Text)
+	}
+
+	// Trigger movement via alarm variable
+	state.Variables["alarm"] = Variable{Type: "bool", BoolVal: true}
+	// Move guard back to market first to test movement rule
+	state.NpcStates["guard"].CurrentRoom = "market"
+	step("look") // triggers NPC movement
+	if state.NpcStates["guard"].CurrentRoom != "tavern" {
+		t.Fatalf("guard should move to tavern via alarm rule after round-trip, got %s", state.NpcStates["guard"].CurrentRoom)
 	}
 }
