@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"temple-adventure/engine"
 	"temple-adventure/models"
@@ -32,6 +33,9 @@ func (r *StoryRepository) Create(ctx context.Context, req models.CreateStoryRequ
 	).Scan(&story.ID, &story.Name, &story.Slug, &story.Description, &story.Author,
 		&story.StartRoom, &story.IsPublished, &story.CreatedAt, &story.UpdatedAt)
 	if err != nil {
+		if strings.Contains(err.Error(), "stories_name_unique") {
+			return nil, models.NewConflictError("a story with this name already exists")
+		}
 		return nil, fmt.Errorf("creating story: %w", err)
 	}
 	return &story, nil

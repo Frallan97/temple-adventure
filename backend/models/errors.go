@@ -24,3 +24,10 @@ func NewBadRequestError(message string) *APIError {
 		Message:    message,
 	}
 }
+
+func NewConflictError(message string) *APIError {
+	return &APIError{
+		StatusCode: 409,
+		Message:    message,
+	}
+}

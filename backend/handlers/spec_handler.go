@@ -104,6 +104,9 @@ func (h *SpecHandler) saveStory(ctx context.Context, spec *storygen.StorySpec, w
 		spec.Title, slug, spec.Description, author, spec.StartRoom,
 	).Scan(&storyID)
 	if err != nil {
+		if strings.Contains(err.Error(), "stories_name_unique") {
+			return nil, fmt.Errorf("a story with the name %q already exists", spec.Title)
+		}
 		return nil, fmt.Errorf("inserting story: %w", err)
 	}
 
