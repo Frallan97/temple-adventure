@@ -1,0 +1,318 @@
+{
+  "title": "The Wizard's Tower",
+  "slug": "wizards-tower",
+  "description": "A legendary wizard vanished decades ago, leaving behind a tower full of enchantments and traps. You've been hired to retrieve the Archmage's Spellbook from the sanctum at the top. Navigate magical puzzles, craft enchanted tools, and unlock ancient secrets.",
+  "author": "Temple Adventure Team",
+  "start_room": "tower_gate",
+  "rooms": {
+    "tower_gate": {
+      "name": "Tower Gate",
+      "description": "You stand before a crumbling stone tower that rises into the clouds. Ivy\ncreeps up the walls and gargoyles leer down from the parapets.\n\nA massive iron door blocks the entrance north. A rusted keyhole is set\ninto its center. Beside the door, a weathered sign hangs crooked on one nail.",
+      "connections": {},
+      "items": ["tower_key", "iron_door", "weathered_sign"],
+      "description_after_puzzle": "The iron door hangs open, revealing a torchlit entrance hall beyond."
+    },
+    "entrance_hall": {
+      "name": "Entrance Hall",
+      "description": "A grand entrance hall stretches before you, lit by enchanted torches that\nflicker with blue flame. Dust motes drift through the air like tiny stars.\n\nA faded tapestry covers the east wall. Doorways lead east to what looks\nlike a library, and west to a cluttered workshop. Above you, a spiral\nstaircase leads up, but a shimmering rune barrier blocks the way.\n\nA stone panel covered in arcane runes is mounted beside the staircase.",
+      "connections": {"east": "library", "west": "workshop"},
+      "items": ["rune_panel", "faded_tapestry"],
+      "description_after_puzzle": "The rune barrier has dissolved. Blue torchlight illuminates the open\nstaircase leading up. Doorways lead east and west."
+    },
+    "library": {
+      "name": "The Library",
+      "description": "Floor-to-ceiling bookshelves line every wall, packed with leather-bound\ntomes and rolled scrolls. A reading desk sits in the center, covered in\ndust. The air smells of old paper and candle wax.\n\nOne book on the desk looks recently disturbed — an arcane tome with a\nglowing clasp. A faint red shimmer catches your eye from a high shelf.",
+      "connections": {"west": "entrance_hall"},
+      "items": ["arcane_tome", "red_crystal", "broken_wand"]
+    },
+    "workshop": {
+      "name": "The Workshop",
+      "description": "Workbenches line the walls, cluttered with half-finished inventions and\nstrange contraptions. Gears, springs, and glass vials are scattered\neverywhere. A forge sits cold in the corner.\n\nA polished glass lens sits on one bench, and a sturdy metal frame\nleans against the wall nearby. Something blue glints from a shelf\nabove the forge.",
+      "connections": {"east": "entrance_hall"},
+      "items": ["glass_lens", "metal_frame", "blue_crystal", "dusty_blueprint"]
+    },
+    "upper_hall": {
+      "name": "Upper Hall",
+      "description": "The spiral staircase opens into a circular hall with arched windows.\nMoonlight streams in, casting long shadows across the stone floor.\n\nA heavy door to the east is carved with crystal patterns. To the north,\nan ornate door bears a large runic dial at its center — clearly some\nkind of combination lock.\n\nA green crystal is embedded in a wall sconce, loose enough to pry free.",
+      "connections": {"east": "crystal_chamber"},
+      "items": ["runic_dial", "green_crystal", "stone_plaque"],
+      "description_after_puzzle": "The combination door to the north stands open, revealing a domed\nobservatory beyond. The crystal door to the east leads to the crystal chamber."
+    },
+    "crystal_chamber": {
+      "name": "Crystal Chamber",
+      "description": "A hexagonal chamber glitters with embedded crystals in every wall.\nIn the center stands a stone altar with three empty crystal sockets\narranged in a triangle. An inscription reads:\n\n'Three lights united shall reveal the path above.'\n\nA circular hatch in the ceiling is sealed by a crystalline lock.",
+      "connections": {"west": "upper_hall"},
+      "items": ["crystal_altar"],
+      "description_after_puzzle": "The three crystals blaze with light in the altar. The ceiling hatch\nhas opened, revealing a ladder leading up to the observatory."
+    },
+    "observatory": {
+      "name": "The Observatory",
+      "description": "A vast domed chamber opens above you, the ceiling an intricate mechanism\nof brass rings and crystal lenses — an enormous orrery depicting the\ncelestial spheres. A telescope-like apparatus points upward through an\nopening in the dome.\n\nThe orrery's central mount has an empty socket where a lens should go.\nA brass lever protrudes from the base of the mechanism.\n\nA sealed door to the north is covered in star-shaped locks.",
+      "connections": {},
+      "items": ["orrery", "brass_lever", "star_chart"],
+      "description_after_puzzle": "The orrery hums with focused starlight, its beam striking the north\ndoor. The star-locks have dissolved, revealing the sanctum beyond."
+    },
+    "sanctum": {
+      "name": "The Archmage's Sanctum",
+      "description": "A small, perfectly preserved chamber at the very top of the tower.\nStarlight pours through a crystal dome overhead. The walls are covered\nin shimmering constellations that slowly rotate.\n\nAt the center, floating above a marble pedestal, is the legendary\nArchmage's Spellbook. Its pages flutter gently though there is no wind.\nArcane energy crackles around it like captured lightning.",
+      "connections": {},
+      "items": ["spellbook"]
+    }
+  },
+  "items": {
+    "tower_key": {
+      "name": "iron key",
+      "description": "A heavy iron key, green with age. Its teeth are worn but still intact.",
+      "aliases": ["key", "iron key", "rusty key"],
+      "portable": true
+    },
+    "iron_door": {
+      "name": "iron door",
+      "description": "A massive iron door set into the stone archway. Despite its age, it looks incredibly solid. A rusted keyhole is set into its center.",
+      "aliases": ["door", "tower door"],
+      "portable": false
+    },
+    "weathered_sign": {
+      "name": "weathered sign",
+      "description": "A wooden sign hanging by one nail beside the door.",
+      "aliases": ["sign", "notice"],
+      "portable": false,
+      "examine_text": "The faded text reads: 'Tower of Archmage Valdris. KEEP OUT.\nTrespassers will be polymorphed.'\nSomeone has scrawled beneath it: 'He's been gone for thirty years. Just walk in.'"
+    },
+    "rune_panel": {
+      "name": "rune panel",
+      "description": "A stone panel mounted beside the staircase, covered in arcane runes arranged in a grid. The runes glow faintly with residual magic.",
+      "aliases": ["panel", "rune stone", "runes"],
+      "portable": false
+    },
+    "faded_tapestry": {
+      "name": "faded tapestry",
+      "description": "A once-magnificent tapestry depicting the wizard Valdris at work.",
+      "aliases": ["tapestry", "hanging"],
+      "portable": false,
+      "examine_text": "The tapestry shows Valdris surrounded by floating crystals — three of them,\none red, one blue, one green — arranged in a triangle above an altar.\nBeneath the image, embroidered text reads:\n'Three lights united shall reveal the path above.'"
+    },
+    "arcane_tome": {
+      "name": "arcane tome",
+      "description": "A thick leather-bound tome with a clasp that glows with faint blue light. It looks like the wizard's personal research journal.",
+      "aliases": ["tome", "book", "journal", "research journal"],
+      "portable": true,
+      "examine_text": "You open the tome carefully. Most pages are filled with incomprehensible\nformulae, but one page is bookmarked with a silk ribbon:\n\n'Rune barrier bypass: trace the pattern STAR-MOON-STAR-SUN on the panel.\nThe barrier will dissolve. — V.'\n\nAnother entry catches your eye: 'The observatory lock requires exactly\nfour turns of the runic dial. No more, no less.'"
+    },
+    "red_crystal": {
+      "name": "red crystal",
+      "description": "A brilliant red crystal that pulses with warm inner light. It hums faintly when you hold it.",
+      "aliases": ["red", "red gem", "ruby crystal"],
+      "portable": true
+    },
+    "blue_crystal": {
+      "name": "blue crystal",
+      "description": "A deep blue crystal that seems to contain swirling mist. It's cool to the touch.",
+      "aliases": ["blue", "blue gem", "sapphire crystal"],
+      "portable": true
+    },
+    "green_crystal": {
+      "name": "green crystal",
+      "description": "A vivid green crystal embedded in a wall sconce. It comes free with a gentle tug.",
+      "aliases": ["green", "green gem", "emerald crystal"],
+      "portable": true
+    },
+    "crystal_altar": {
+      "name": "crystal altar",
+      "description": "A stone altar with three empty sockets arranged in a triangle. An inscription reads: 'Three lights united shall reveal the path above.'",
+      "aliases": ["altar", "stone altar", "pedestal"],
+      "portable": false
+    },
+    "broken_wand": {
+      "name": "broken wand",
+      "description": "A snapped wand of dark wood. Whatever magic it once held is long gone.",
+      "aliases": ["wand", "broken wand"],
+      "portable": true,
+      "examine_text": "The wand is split clean in two. Scorch marks suggest it broke during\na particularly ambitious spell. Probably best not to try using it."
+    },
+    "glass_lens": {
+      "name": "glass lens",
+      "description": "A perfectly ground glass lens, clear as water. It focuses light into a tight beam when held up.",
+      "aliases": ["lens", "glass"],
+      "portable": true
+    },
+    "metal_frame": {
+      "name": "metal frame",
+      "description": "A sturdy metal frame shaped to hold something circular. Etched runes line its edges — it was clearly designed for a magical purpose.",
+      "aliases": ["frame", "bracket", "metal bracket"],
+      "portable": true
+    },
+    "focusing_lens": {
+      "name": "enchanted focusing lens",
+      "description": "A glass lens mounted in an etched metal frame. The runes along the frame glow softly, and the lens bends light in impossible ways.",
+      "aliases": ["focusing lens", "enchanted lens", "magic lens"],
+      "portable": true
+    },
+    "dusty_blueprint": {
+      "name": "dusty blueprint",
+      "description": "A large rolled blueprint pinned to the workbench.",
+      "aliases": ["blueprint", "plans", "schematic"],
+      "portable": false,
+      "examine_text": "The blueprint shows detailed plans for an 'Enchanted Focusing Lens'.\nThe notes read: 'Combine a ground glass lens with an etched metal frame.\nThe runes will activate automatically upon assembly.\nRequired for the orrery's celestial alignment mechanism.'"
+    },
+    "runic_dial": {
+      "name": "runic dial",
+      "description": "A large circular dial mounted on the north door, covered in shifting runes. It looks like it can be turned. A small plaque reads: 'Patience reveals the way.'",
+      "aliases": ["dial", "combination dial", "lock dial"],
+      "portable": false
+    },
+    "stone_plaque": {
+      "name": "stone plaque",
+      "description": "A small stone plaque mounted on the wall near the dial.",
+      "aliases": ["plaque", "inscription"],
+      "portable": false,
+      "examine_text": "The plaque reads: 'Four turns, no more, no less.\nEach turn brings you closer. Rush, and the dial resets.'"
+    },
+    "orrery": {
+      "name": "celestial orrery",
+      "description": "An enormous brass mechanism depicting the celestial spheres. Crystal lenses and brass rings rotate slowly. A central mount has an empty socket where a focusing lens should go.",
+      "aliases": ["orrery", "mechanism", "celestial mechanism"],
+      "portable": false
+    },
+    "brass_lever": {
+      "name": "brass lever",
+      "description": "A polished brass lever at the base of the orrery mechanism. A label reads: 'CELESTIAL ALIGNMENT — Pull to begin. Warning: alignment window is brief.'",
+      "aliases": ["lever", "brass lever"],
+      "portable": false
+    },
+    "star_chart": {
+      "name": "star chart",
+      "description": "A detailed star chart mounted on the observatory wall.",
+      "aliases": ["chart", "star map", "map"],
+      "portable": false,
+      "examine_text": "The chart shows celestial alignment patterns. A note in the margin reads:\n'When the lever is pulled, you have roughly 6 turns before the alignment\nwindow closes. Place the focusing lens in the orrery mount before then,\nor the mechanism locks and resets. If it fails... the energy discharge\nwill blast you back down to the crystal chamber.'"
+    },
+    "spellbook": {
+      "name": "Archmage's Spellbook",
+      "description": "The legendary spellbook of Archmage Valdris, floating above a marble pedestal. Its pages flutter with arcane energy, and captured lightning crackles across its binding.",
+      "aliases": ["spellbook", "book", "tome", "archmage's spellbook"],
+      "portable": true
+    }
+  },
+  "puzzles": [
+    {
+      "id": "tower_entrance",
+      "type": "key_lock",
+      "name": "The Tower Door",
+      "description": "Use the iron key to unlock the tower entrance.",
+      "room": "tower_gate",
+      "key_item": "tower_key",
+      "lock_target": "iron_door",
+      "unlock_direction": "north",
+      "unlock_room": "entrance_hall",
+      "lock_verb": "use",
+      "completion_text": "You slide the iron key into the lock and turn. The mechanism groans, then clicks. The massive door swings inward with a rush of stale air.",
+      "lock_fail_text": "The door is locked. You need a key."
+    },
+    {
+      "id": "rune_barrier",
+      "type": "examine_learn",
+      "name": "The Rune Barrier",
+      "description": "Decipher the arcane tome and disable the rune barrier blocking the staircase.",
+      "room": "entrance_hall",
+      "source_item": "arcane_tome",
+      "source_learn_text": "The tome reveals the bypass pattern: STAR-MOON-STAR-SUN.",
+      "target_item": "rune_panel",
+      "target_verb": "touch",
+      "target_success_text": "You trace the pattern on the panel: star, moon, star, sun. The runes flare bright blue, then fade. The shimmering barrier above the staircase dissolves into sparkling motes of light.",
+      "target_fail_text": "You touch the runes, but without knowing the correct pattern, nothing happens. The barrier shimmers mockingly.",
+      "unlock_direction": "up",
+      "unlock_room": "upper_hall",
+      "lock_verb": "use",
+      "completion_text": "The rune barrier dissolves! The staircase spirals upward, free of obstruction.",
+      "lock_fail_text": "The rune barrier still shimmers. You need to enter the correct pattern first."
+    },
+    {
+      "id": "craft_lens",
+      "type": "item_combine",
+      "name": "Craft the Focusing Lens",
+      "description": "Combine the glass lens and metal frame to create an enchanted focusing lens.",
+      "room": "workshop",
+      "combine_item_a": "glass_lens",
+      "combine_item_b": "metal_frame",
+      "combine_result": "focusing_lens",
+      "combine_verb": "use",
+      "combine_consume_a": true,
+      "combine_consume_b": true,
+      "combine_text": "You seat the glass lens into the metal frame. The moment it clicks into place, the etched runes along the frame blaze to life with blue light. The lens shimmers — you've created an enchanted focusing lens!",
+      "combine_fail_text": "You turn the lens over in your hands. It needs to be mounted in something.",
+      "completion_text": "The focusing lens is assembled and ready."
+    },
+    {
+      "id": "dial_lock",
+      "type": "combination_lock",
+      "name": "The Runic Dial",
+      "description": "Turn the runic dial the correct number of times to open the observatory door.",
+      "room": "upper_hall",
+      "combination_target": "runic_dial",
+      "combination_verb": "turn",
+      "combination_steps": 4,
+      "combination_texts": [
+        "You turn the dial. The first rune lights up with a soft chime. Three more to go.",
+        "Another turn. The second rune ignites. The dial hums with building energy.",
+        "A third turn. Three runes glow in sequence. The door begins to vibrate.",
+        "The fourth turn! All four runes blaze with golden light. The door shudders and swings open with a rush of cool night air!"
+      ],
+      "unlock_direction": "north",
+      "unlock_room": "observatory",
+      "completion_text": "The observatory door is open!"
+    },
+    {
+      "id": "crystal_ritual",
+      "type": "counter_puzzle",
+      "name": "The Crystal Ritual",
+      "description": "Collect three crystals scattered through the tower and place them in the altar.",
+      "room": "crystal_chamber",
+      "counter_items": ["red_crystal", "blue_crystal", "green_crystal"],
+      "counter_verb": "use",
+      "counter_target": 3,
+      "counter_item_texts": {
+        "red_crystal": "You place the red crystal in the first socket. It flares to life with warm crimson light!",
+        "blue_crystal": "You place the blue crystal in the second socket. Cool blue light joins the red!",
+        "green_crystal": "You place the green crystal in the final socket. Emerald light completes the triangle!"
+      },
+      "counter_consume_items": true,
+      "unlock_direction": "up",
+      "unlock_room": "observatory",
+      "completion_text": "The three crystals blaze in unison! A beam of white light shoots upward from the altar, and the ceiling hatch grinds open, revealing a ladder to the observatory above."
+    },
+    {
+      "id": "celestial_alignment",
+      "type": "timed_challenge",
+      "name": "Celestial Alignment",
+      "description": "Place the focusing lens in the orrery before the alignment window closes.",
+      "room": "observatory",
+      "trigger_item": "brass_lever",
+      "trigger_verb": "pull",
+      "trigger_text": "You pull the brass lever! The orrery roars to life — brass rings spin, crystal lenses rotate, and a beam of concentrated starlight shoots down through the dome. The central mount glows white-hot, waiting for a focusing lens.\n\nA timer appears on the mechanism: 'ALIGNMENT WINDOW: 6 TURNS REMAINING.'",
+      "turn_limit": 6,
+      "failure_text": "The alignment window closes! The orrery screeches to a halt, and a massive discharge of energy blasts through the chamber. You're hurled backward through the floor hatch, tumbling down into the crystal chamber. The hatch seals above you with a crystalline snap.",
+      "failure_effects": [
+        {"type": "move_player", "room": "crystal_chamber"},
+        {"type": "lock_connection", "room": "crystal_chamber", "direction": "up"}
+      ],
+      "fetch_item": "focusing_lens",
+      "fetch_verb": "use",
+      "fetch_room": "observatory",
+      "fetch_success_text": "You slam the enchanted focusing lens into the orrery's mount! The lens catches the starlight beam and focuses it into a searing point of brilliance. The beam strikes the north door — the star-shaped locks glow white, then dissolve one by one.",
+      "fetch_consume_item": true,
+      "unlock_direction": "north",
+      "unlock_room": "sanctum",
+      "completion_text": "The orrery hums with perfect celestial harmony. The north door stands open, bathed in focused starlight. The sanctum awaits."
+    },
+    {
+      "id": "win_spellbook",
+      "type": "win_condition",
+      "name": "Claim the Spellbook",
+      "room": "sanctum",
+      "win_item": "spellbook",
+      "win_verb": "take",
+      "win_text": "You reach out and grasp the Archmage's Spellbook. The moment your fingers touch the binding, the floating enchantment dissolves. The book settles into your hands, warm and heavy with accumulated knowledge.\n\nThe constellations on the walls spin faster, then freeze — forming an arrow pointing to the floor. A hidden staircase spirals downward, leading all the way to the tower's base.\n\nYou descend with the spellbook clutched to your chest, emerging into the cool night air. The tower's gargoyles seem to nod approvingly as you walk away.\n\nCongratulations, adventurer! The Archmage's Spellbook is yours!"
+    }
+  ]
+}

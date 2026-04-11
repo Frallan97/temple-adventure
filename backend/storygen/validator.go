@@ -45,6 +45,7 @@ func ValidateSpec(spec *StorySpec) []string {
 	validTypes := map[string]bool{
 		"key_lock": true, "examine_learn": true, "fetch_quest": true,
 		"timed_challenge": true, "win_condition": true,
+		"combination_lock": true, "item_combine": true, "counter_puzzle": true,
 	}
 	seenIDs := map[string]bool{}
 
@@ -111,6 +112,52 @@ func ValidateSpec(spec *StorySpec) []string {
 		case "win_condition":
 			errs = append(errs, checkItemRef(spec, ps.ID, "win_item", ps.WinItem)...)
 			winCount++
+		case "combination_lock":
+			errs = append(errs, checkItemRef(spec, ps.ID, "combination_target", ps.CombinationTarget)...)
+			if ps.CombinationSteps <= 0 {
+				errs = append(errs, fmt.Sprintf("puzzle %q: combination_steps must be > 0", ps.ID))
+			}
+			if len(ps.CombinationTexts) > 0 && len(ps.CombinationTexts) != ps.CombinationSteps {
+				errs = append(errs, fmt.Sprintf("puzzle %q: combination_texts length (%d) must match combination_steps (%d)", ps.ID, len(ps.CombinationTexts), ps.CombinationSteps))
+			}
+			if ps.UnlockRoom != "" {
+				errs = append(errs, checkRoomRef(spec, ps.ID, "unlock_room", ps.UnlockRoom)...)
+			}
+		case "item_combine":
+			errs = append(errs, checkItemRef(spec, ps.ID, "combine_item_a", ps.CombineItemA)...)
+			errs = append(errs, checkItemRef(spec, ps.ID, "combine_item_b", ps.CombineItemB)...)
+			errs = append(errs, checkItemRef(spec, ps.ID, "combine_result", ps.CombineResult)...)
+			if ps.CombineResult != "" {
+				if item, ok := spec.Items[ps.CombineResult]; ok && !item.Portable {
+					errs = append(errs, fmt.Sprintf("puzzle %q: combine_result %q should be portable", ps.ID, ps.CombineResult))
+				}
+				for roomID, room := range spec.Rooms {
+					for _, itemID := range room.Items {
+						if itemID == ps.CombineResult {
+							errs = append(errs, fmt.Sprintf("puzzle %q: combine_result %q should not be placed in room %q", ps.ID, ps.CombineResult, roomID))
+						}
+					}
+				}
+			}
+		case "counter_puzzle":
+			if len(ps.CounterItems) == 0 {
+				errs = append(errs, fmt.Sprintf("puzzle %q: counter_items is required", ps.ID))
+			}
+			for _, itemID := range ps.CounterItems {
+				errs = append(errs, checkItemRef(spec, ps.ID, "counter_items", itemID)...)
+				if item, ok := spec.Items[itemID]; ok && !item.Portable {
+					errs = append(errs, fmt.Sprintf("puzzle %q: counter item %q must be portable", ps.ID, itemID))
+				}
+			}
+			if ps.CounterTarget <= 0 {
+				errs = append(errs, fmt.Sprintf("puzzle %q: counter_target must be > 0", ps.ID))
+			}
+			if ps.CounterTarget > len(ps.CounterItems) {
+				errs = append(errs, fmt.Sprintf("puzzle %q: counter_target (%d) exceeds counter_items count (%d)", ps.ID, ps.CounterTarget, len(ps.CounterItems)))
+			}
+			if ps.UnlockRoom != "" {
+				errs = append(errs, checkRoomRef(spec, ps.ID, "unlock_room", ps.UnlockRoom)...)
+			}
 		}
 	}
 

@@ -12,8 +12,9 @@ import { StorySettings } from "../components/editor/StorySettings";
 import { RoomEditor } from "../components/editor/RoomEditor";
 import { ItemEditor } from "../components/editor/ItemEditor";
 import { PuzzleEditor } from "../components/editor/PuzzleEditor";
+import { StoryGraph } from "../components/editor/StoryGraph";
 
-type Tab = "settings" | "rooms" | "items" | "puzzles";
+type Tab = "settings" | "rooms" | "items" | "puzzles" | "graph";
 
 export function StoryEditorPage() {
   const { storyId } = useParams<{ storyId: string }>();
@@ -89,6 +90,7 @@ export function StoryEditorPage() {
     { key: "rooms", label: "Rooms", count: Object.keys(rooms).length },
     { key: "items", label: "Items", count: Object.keys(items).length },
     { key: "puzzles", label: "Puzzles", count: Object.keys(puzzles).length },
+    { key: "graph", label: "Graph", count: 0 },
   ];
 
   return (
@@ -172,40 +174,51 @@ export function StoryEditorPage() {
       </div>
 
       {/* Content */}
-      <div className="p-4 sm:p-6 max-w-6xl">
-        {tab === "settings" && (
-          <StorySettings
-            story={story}
-            storyId={storyId}
-            onUpdate={(updated) => setStory(updated)}
-            showStatus={showStatus}
-          />
-        )}
-        {tab === "rooms" && (
-          <RoomEditor
-            storyId={storyId}
+      {tab === "graph" ? (
+        <div className="p-4 sm:p-6 relative">
+          <StoryGraph
             rooms={rooms}
-            onReload={loadStory}
-            showStatus={showStatus}
-          />
-        )}
-        {tab === "items" && (
-          <ItemEditor
-            storyId={storyId}
             items={items}
-            onReload={loadStory}
-            showStatus={showStatus}
-          />
-        )}
-        {tab === "puzzles" && (
-          <PuzzleEditor
-            storyId={storyId}
             puzzles={puzzles}
-            onReload={loadStory}
-            showStatus={showStatus}
+            startRoom={story.start_room}
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="p-4 sm:p-6 max-w-6xl">
+          {tab === "settings" && (
+            <StorySettings
+              story={story}
+              storyId={storyId}
+              onUpdate={(updated) => setStory(updated)}
+              showStatus={showStatus}
+            />
+          )}
+          {tab === "rooms" && (
+            <RoomEditor
+              storyId={storyId}
+              rooms={rooms}
+              onReload={loadStory}
+              showStatus={showStatus}
+            />
+          )}
+          {tab === "items" && (
+            <ItemEditor
+              storyId={storyId}
+              items={items}
+              onReload={loadStory}
+              showStatus={showStatus}
+            />
+          )}
+          {tab === "puzzles" && (
+            <PuzzleEditor
+              storyId={storyId}
+              puzzles={puzzles}
+              onReload={loadStory}
+              showStatus={showStatus}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

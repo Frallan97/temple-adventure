@@ -1,0 +1,182 @@
+{
+  "title": "Station Omega",
+  "slug": "station-omega",
+  "description": "You awaken from cryosleep on a derelict space station. Alarms blare, the reactor is failing, and the crew is gone. Find the escape pod before Station Omega tears itself apart.",
+  "author": "Temple Adventure Team",
+  "start_room": "cryo_bay",
+  "rooms": {
+    "cryo_bay": {
+      "name": "Cryogenic Bay",
+      "description": "Frost clings to the walls of the cryogenic bay. Your pod is the only one that\nopened — the others are dark and silent. Emergency lights bathe everything in\npulsing red.\n\nA reinforced blast door blocks the corridor north. A security terminal is\nmounted beside it, its screen flickering with a password prompt.\n\nTo the east, a doorway leads to what looks like the station's medical wing.\nA faded sign above it reads 'MEDBAY — EMERGENCY SUPPLIES'.",
+      "connections": {"east": "med_bay"},
+      "items": ["data_pad", "access_card", "medkit", "security_terminal"],
+      "description_after_puzzle": "The blast door stands open, revealing a smoke-filled corridor to the north.\nTo the east, a doorway leads to the medical wing."
+    },
+    "med_bay": {
+      "name": "Medical Bay",
+      "description": "Overturned gurneys and shattered vials litter the floor of the medical bay.\nCabinets hang open, picked clean of anything useful. A bio-containment unit\nsits against the far wall, its status light blinking amber — the only thing\nleft intact.\n\nA sign on the far wall reads 'EMERGENCY EXIT →' but the corridor beyond\nhas completely collapsed. Twisted metal and rubble block any passage.\n\nThe only way out is back west.",
+      "connections": {"west": "cryo_bay"},
+      "items": ["bio_container", "quarantine_panel"],
+      "description_after_puzzle": "The medical bay is quiet now. Broken glass and empty cabinets.\nThe quarantine panel glows green: 'LOCKDOWN CLEARED'.\nThe only way out is back west."
+    },
+    "reactor_room": {
+      "name": "Reactor Control Room",
+      "description": "The reactor room hums with dangerous energy. Warning lights flash across\nevery console. The main reactor core pulses with an unstable blue glow\nin the center of the chamber.\n\nA heavy floor hatch leads down, but it's sealed by magnetic locks tied\nto the reactor's safety system.",
+      "connections": {"south": "cryo_bay"},
+      "items": ["reactor_core", "coolant_valve", "power_cell", "engineering_log"],
+      "description_after_puzzle": "The reactor hums steadily now. The floor hatch stands open, revealing a ladder down to the hangar."
+    },
+    "hangar": {
+      "name": "Emergency Hangar",
+      "description": "A cavernous hangar stretches before you, scarred by old plasma burns.\nMost of the docking bays are empty — ships long gone. But in the far\ncorner, mag-locked to its launch cradle, sits a single escape pod.\nIts status lights glow green. Ready to fly.",
+      "connections": {},
+      "items": ["escape_pod"]
+    }
+  },
+  "items": {
+    "data_pad": {
+      "name": "crew data pad",
+      "description": "A standard-issue data pad, cracked but still functional. The screen shows a partially corrupted crew manifest.",
+      "aliases": ["pad", "data pad", "datapad", "tablet"],
+      "portable": true,
+      "examine_text": "You scroll through corrupted files... one entry stands out:\n'Security override: OMEGA-7-RED. Use on any terminal to bypass lockdown.'"
+    },
+    "access_card": {
+      "name": "access card",
+      "description": "A crew access card with a faded photo. The name reads 'Dr. Chen, Chief Engineer'.",
+      "aliases": ["card", "keycard", "key card", "id card", "badge"],
+      "portable": true
+    },
+    "medkit": {
+      "name": "emergency medkit",
+      "description": "A wall-mounted emergency medkit. Most supplies have been used, but it adds to the eerie sense that someone left in a hurry.",
+      "aliases": ["medkit", "med kit", "first aid"],
+      "portable": true
+    },
+    "security_terminal": {
+      "name": "security terminal",
+      "description": "A wall-mounted terminal next to the blast door. Its screen flickers with a password prompt: 'ENTER OVERRIDE CODE'. A card reader slot glows amber below the screen.",
+      "aliases": ["terminal", "console", "screen", "panel"],
+      "portable": false
+    },
+    "bio_container": {
+      "name": "bio-containment unit",
+      "description": "A sealed bio-containment unit with a thick glass viewport. Through the glass you can see rows of medical vials filled with pale blue liquid. A warning label reads: 'BIOHAZARD LEVEL 3 — OPENING UNIT TRIGGERS QUARANTINE PROTOCOL'. The release latch glows invitingly.",
+      "aliases": ["container", "bio container", "containment unit", "unit", "bio unit"],
+      "portable": false,
+      "examine_text": "Through the glass you can see medical vials labeled 'CRYO-STASIS STABILIZER'.\nThey look valuable, but the biohazard warning is hard to ignore.\nThe release latch would be easy to pull..."
+    },
+    "quarantine_panel": {
+      "name": "quarantine override panel",
+      "description": "A small panel mounted beside the doorway, labeled 'QUARANTINE OVERRIDE'. It's currently inactive — no lockdown in progress.",
+      "aliases": ["override", "override panel", "quarantine panel", "quarantine override"],
+      "portable": false
+    },
+    "reactor_core": {
+      "name": "reactor core",
+      "description": "The main fusion reactor, housed behind reinforced transparisteel. It pulses with unstable blue light. Radiation warnings flash on nearby monitors.",
+      "aliases": ["core", "reactor", "fusion reactor"],
+      "portable": false
+    },
+    "coolant_valve": {
+      "name": "emergency coolant valve",
+      "description": "A large red valve wheel marked 'EMERGENCY COOLANT — MANUAL OVERRIDE'. A warning label reads: 'Activating coolant flush initiates 8-turn safety window. Reactor must be stabilized before window closes.'",
+      "aliases": ["valve", "coolant", "wheel", "coolant valve"],
+      "portable": false
+    },
+    "power_cell": {
+      "name": "backup power cell",
+      "description": "A heavy cylindrical power cell stored in a wall rack. Its charge indicator shows full. The label reads 'REACTOR STABILIZATION UNIT — INSERT INTO CORE'.",
+      "aliases": ["cell", "power cell", "battery", "stabilization unit"],
+      "portable": true
+    },
+    "engineering_log": {
+      "name": "engineering log",
+      "description": "A scorched engineering log book left open on a console.",
+      "aliases": ["log", "logbook", "log book", "notebook"],
+      "portable": true,
+      "examine_text": "The last entry reads: 'Reactor destabilizing. Coolant flush buys maybe 8 turns.\nInsert backup power cell into the core to stabilize. If you fail... don't be\nin this room. — Dr. Chen'"
+    },
+    "escape_pod": {
+      "name": "escape pod",
+      "description": "A compact two-person escape pod. Its hull is scorched but intact. The entry hatch is open and the launch sequence is primed. All you have to do is board it.",
+      "aliases": ["pod", "ship", "shuttle"],
+      "portable": true
+    }
+  },
+  "puzzles": [
+    {
+      "id": "quarantine_trap",
+      "type": "timed_challenge",
+      "name": "Quarantine Lockdown",
+      "description": "Escape the medical bay before the quarantine seals you in.",
+      "room": "med_bay",
+      "trigger_item": "bio_container",
+      "trigger_verb": "open",
+      "trigger_text": "You pull the release latch. The unit hisses open — and immediately every alarm in the room screams to life!\n\n'BIOHAZARD DETECTED — QUARANTINE LOCKDOWN INITIATED.'\n\nHeavy blast shutters begin descending over the doorway. A red countdown appears on the wall: 4 TURNS REMAINING.",
+      "turn_limit": 4,
+      "failure_text": "The blast shutters slam shut with a deafening clang. You're sealed in.\n\n'QUARANTINE COMPLETE. DECONTAMINATION IN PROGRESS.'\n\nGas floods the room. You stumble, vision blurring... The last thing you see before losing consciousness is the emergency chute opening beneath you.\n\nYou wake up back in the cryogenic bay, ejected through the emergency system. The med bay door is sealed shut — permanently.",
+      "failure_effects": [
+        {"type": "move_player", "room": "cryo_bay"},
+        {"type": "lock_connection", "room": "cryo_bay", "direction": "east"}
+      ],
+      "fetch_item": "quarantine_panel",
+      "fetch_verb": "use",
+      "fetch_room": "med_bay",
+      "fetch_success_text": "You slam your fist on the quarantine override panel. It flashes from red to green.\n\n'QUARANTINE OVERRIDE ACCEPTED. LOCKDOWN CANCELLED.'\n\nThe blast shutters grind to a halt and slowly retract. You let out a breath you didn't know you were holding.",
+      "fetch_consume_item": false,
+      "completion_text": "The medical bay falls quiet. That was close — nothing useful here after all. Time to find another way out."
+    },
+    {
+      "id": "door_override",
+      "type": "examine_learn",
+      "name": "Blast Door Override",
+      "description": "Find the security override code and open the blast door.",
+      "room": "cryo_bay",
+      "source_item": "data_pad",
+      "source_learn_text": "The data pad reveals the override code: OMEGA-7-RED.",
+      "target_item": "security_terminal",
+      "target_verb": "enter",
+      "target_success_text": "You type OMEGA-7-RED into the terminal. The screen flashes green: 'OVERRIDE ACCEPTED'.",
+      "target_fail_text": "The terminal displays 'ENTER OVERRIDE CODE'. You don't know the code yet.",
+      "unlock_direction": "north",
+      "unlock_room": "reactor_room",
+      "lock_verb": "use",
+      "completion_text": "The blast door groans and slides open, revealing a smoke-filled corridor!",
+      "lock_fail_text": "The terminal beeps angrily. The override hasn't been entered yet."
+    },
+    {
+      "id": "reactor_stabilize",
+      "type": "timed_challenge",
+      "name": "Reactor Meltdown",
+      "description": "Stabilize the reactor before it goes critical.",
+      "room": "reactor_room",
+      "trigger_item": "coolant_valve",
+      "trigger_verb": "turn",
+      "trigger_text": "You wrench the valve open! Coolant floods the reactor chamber. Alarms change from red to amber. A countdown appears on every screen: 'STABILIZE REACTOR — 8 TURNS REMAINING'.",
+      "turn_limit": 8,
+      "failure_text": "The reactor goes critical! A shockwave hurls you back through the corridor. The blast door slams shut behind you, sealing the reactor room forever.",
+      "failure_effects": [
+        {"type": "move_player", "room": "cryo_bay"},
+        {"type": "lock_connection", "room": "cryo_bay", "direction": "north"}
+      ],
+      "fetch_item": "power_cell",
+      "fetch_verb": "use",
+      "fetch_room": "reactor_room",
+      "fetch_success_text": "You slam the power cell into the reactor core. The unstable pulsing steadies... stabilizes... and the blue glow shifts to a calm green. The radiation warnings go dark.",
+      "fetch_consume_item": true,
+      "unlock_direction": "down",
+      "unlock_room": "hangar",
+      "completion_text": "The magnetic locks on the floor hatch disengage with a heavy clunk. A ladder descends into the hangar below."
+    },
+    {
+      "id": "win_escape",
+      "type": "win_condition",
+      "name": "Escape Station Omega",
+      "room": "hangar",
+      "win_item": "escape_pod",
+      "win_verb": "board",
+      "win_text": "You climb into the escape pod and hit the launch sequence. The mag-locks release, thrusters fire, and Station Omega shrinks behind you as you hurtle into open space.\n\nYou're safe. You made it.\n\nCongratulations, survivor!"
+    }
+  ]
+}

@@ -34,6 +34,12 @@ func Expand(spec *StorySpec) (*engine.WorldDefinition, error) {
 			err = e.expandTimedChallenge(ps)
 		case "win_condition":
 			err = e.expandWinCondition(ps)
+		case "combination_lock":
+			err = e.expandCombinationLock(ps)
+		case "item_combine":
+			err = e.expandItemCombine(ps)
+		case "counter_puzzle":
+			err = e.expandCounterPuzzle(ps)
 		default:
 			err = fmt.Errorf("unknown puzzle type %q", ps.Type)
 		}
@@ -450,6 +456,285 @@ func (e *expander) expandWinCondition(ps *PuzzleSpec) error {
 		},
 		Response: ps.WinText,
 	})
+
+	return nil
+}
+
+func (e *expander) expandCombinationLock(ps *PuzzleSpec) error {
+	verb := or(ps.CombinationVerb, "turn")
+	startedVar := ps.ID + "_started"
+	stepVar := ps.ID + "_step"
+	solvedVar := ps.ID + "_solved"
+	n := ps.CombinationSteps
+
+	item := e.world.Items[ps.CombinationTarget]
+	if item == nil {
+		return fmt.Errorf("combination_target item %q not found", ps.CombinationTarget)
+	}
+
+	stepText := func(i int) string {
+		if i < len(ps.CombinationTexts) {
+			return ps.CombinationTexts[i]
+		}
+		if i == n-1 {
+			return or(ps.CompletionText, "The mechanism clicks into place!")
+		}
+		return fmt.Sprintf("Click. Step %d of %d.", i+1, n)
+	}
+
+	// Already solved guard
+	item.Interactions = append(item.Interactions, engine.Interaction{
+		Verb: verb,
+		Conditions: []engine.Condition{
+			{Type: "var_equals", Key: solvedVar, Value: true},
+		},
+		Response: "It's already been solved.",
+	})
+
+	if n == 1 {
+		// Single step: goes straight to solved
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "var_equals", Key: startedVar, Value: true, Negate: true},
+			},
+			Effects: []engine.Effect{
+				{Type: "set_var", Key: startedVar, Value: true},
+				{Type: "set_var", Key: solvedVar, Value: true},
+			},
+			Response: stepText(0),
+		})
+	} else {
+		// Step 0: not yet started
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "var_equals", Key: startedVar, Value: true, Negate: true},
+			},
+			Effects: []engine.Effect{
+				{Type: "set_var", Key: startedVar, Value: true},
+				{Type: "set_var", Key: stepVar, Value: 1},
+			},
+			Response: stepText(0),
+		})
+
+		// Intermediate steps 1..N-2
+		for i := 1; i < n-1; i++ {
+			item.Interactions = append(item.Interactions, engine.Interaction{
+				Verb: verb,
+				Conditions: []engine.Condition{
+					{Type: "var_equals", Key: stepVar, Value: i},
+				},
+				Effects: []engine.Effect{
+					{Type: "set_var", Key: stepVar, Value: i + 1},
+				},
+				Response: stepText(i),
+			})
+		}
+
+		// Final step
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "var_equals", Key: stepVar, Value: n - 1},
+			},
+			Effects: []engine.Effect{
+				{Type: "set_var", Key: solvedVar, Value: true},
+			},
+			Response: stepText(n - 1),
+		})
+	}
+
+	// Puzzle definition
+	var stepEffects []engine.Effect
+	if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
+		stepEffects = append(stepEffects, engine.Effect{
+			Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom,
+		})
+		e.removeLockAndRegister(ps.Room, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
+	} else {
+		if room := e.world.Rooms[ps.Room]; room != nil {
+			room.Puzzles = append(room.Puzzles, ps.ID)
+		}
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:          ps.ID,
+		Name:        ps.Name,
+		Description: ps.Description,
+		Steps: []engine.PuzzleStep{
+			{
+				StepID:     "solve",
+				Prompt:     ps.Description,
+				Conditions: []engine.Condition{{Type: "var_equals", Key: solvedVar, Value: true}},
+				Effects:    stepEffects,
+			},
+		},
+		CompletionText: ps.CompletionText,
+	}
+
+	e.addConditionalDesc(ps.Room, solvedVar)
+
+	return nil
+}
+
+func (e *expander) expandItemCombine(ps *PuzzleSpec) error {
+	verb := or(ps.CombineVerb, "use")
+	combinedVar := ps.ID + "_combined"
+
+	itemA := e.world.Items[ps.CombineItemA]
+	if itemA == nil {
+		return fmt.Errorf("combine_item_a %q not found", ps.CombineItemA)
+	}
+	if e.world.Items[ps.CombineItemB] == nil {
+		return fmt.Errorf("combine_item_b %q not found", ps.CombineItemB)
+	}
+	if e.world.Items[ps.CombineResult] == nil {
+		return fmt.Errorf("combine_result %q not found", ps.CombineResult)
+	}
+
+	// Success interaction: has both items
+	effects := []engine.Effect{
+		{Type: "add_item", Key: ps.CombineResult},
+		{Type: "set_var", Key: combinedVar, Value: true},
+	}
+	if ps.CombineConsumeA {
+		effects = append(effects, engine.Effect{Type: "remove_item", Key: ps.CombineItemA})
+	}
+	if ps.CombineConsumeB {
+		effects = append(effects, engine.Effect{Type: "remove_item", Key: ps.CombineItemB})
+	}
+
+	itemA.Interactions = append(itemA.Interactions, engine.Interaction{
+		Verb: verb,
+		Conditions: []engine.Condition{
+			{Type: "has_item", Key: ps.CombineItemA},
+			{Type: "has_item", Key: ps.CombineItemB},
+		},
+		Effects:  effects,
+		Response: ps.CombineText,
+	})
+
+	// Fail interaction: only has item A
+	if ps.CombineFailText != "" {
+		itemA.Interactions = append(itemA.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "has_item", Key: ps.CombineItemA},
+			},
+			FailResponse: ps.CombineFailText,
+		})
+	}
+
+	// Puzzle definition
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:          ps.ID,
+		Name:        ps.Name,
+		Description: ps.Description,
+		Steps: []engine.PuzzleStep{
+			{
+				StepID:     "combine",
+				Prompt:     ps.Description,
+				Conditions: []engine.Condition{{Type: "var_equals", Key: combinedVar, Value: true}},
+			},
+		},
+		CompletionText: ps.CompletionText,
+	}
+
+	if room := e.world.Rooms[ps.Room]; room != nil {
+		room.Puzzles = append(room.Puzzles, ps.ID)
+	}
+
+	e.addConditionalDesc(ps.Room, combinedVar)
+
+	return nil
+}
+
+func (e *expander) expandCounterPuzzle(ps *PuzzleSpec) error {
+	verb := or(ps.CounterVerb, "use")
+	countVar := ps.ID + "_count"
+	reachedVar := ps.ID + "_reached"
+
+	for _, itemID := range ps.CounterItems {
+		item := e.world.Items[itemID]
+		if item == nil {
+			return fmt.Errorf("counter_items references unknown item %q", itemID)
+		}
+
+		doneVar := ps.ID + "_" + itemID + "_done"
+
+		// Response text for this item
+		responseText := ps.CounterDefaultText
+		if ps.CounterItemTexts != nil {
+			if text, ok := ps.CounterItemTexts[itemID]; ok {
+				responseText = text
+			}
+		}
+		if responseText == "" {
+			responseText = "Done."
+		}
+
+		// Already done guard
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "has_item", Key: itemID},
+				{Type: "var_equals", Key: doneVar, Value: true},
+			},
+			Response: "You've already used this.",
+		})
+
+		// Success interaction
+		effects := []engine.Effect{
+			{Type: "increment_var", Key: countVar, Value: 1},
+			{Type: "set_var", Key: doneVar, Value: true},
+		}
+		if ps.CounterConsumeItems {
+			effects = append(effects, engine.Effect{Type: "remove_item", Key: itemID})
+		}
+
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "has_item", Key: itemID},
+				{Type: "var_equals", Key: doneVar, Value: true, Negate: true},
+			},
+			Effects:  effects,
+			Response: responseText,
+		})
+	}
+
+	// Puzzle definition
+	stepEffects := []engine.Effect{
+		{Type: "set_var", Key: reachedVar, Value: true},
+	}
+	if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
+		stepEffects = append(stepEffects, engine.Effect{
+			Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom,
+		})
+		e.removeLockAndRegister(ps.Room, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
+	} else {
+		if room := e.world.Rooms[ps.Room]; room != nil {
+			room.Puzzles = append(room.Puzzles, ps.ID)
+		}
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:          ps.ID,
+		Name:        ps.Name,
+		Description: ps.Description,
+		Steps: []engine.PuzzleStep{
+			{
+				StepID:     "collect",
+				Prompt:     ps.Description,
+				Conditions: []engine.Condition{{Type: "var_gte", Key: countVar, Value: ps.CounterTarget}},
+				Effects:    stepEffects,
+			},
+		},
+		CompletionText: ps.CompletionText,
+	}
+
+	e.addConditionalDesc(ps.Room, reachedVar)
 
 	return nil
 }

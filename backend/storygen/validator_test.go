@@ -240,6 +240,177 @@ func TestValidateWorldDeepNoWinCondition(t *testing.T) {
 	assertContains(t, errs, "no win condition")
 }
 
+// --- combination_lock ---
+
+func TestValidateSpecCombinationLockValid(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["dial"] = ItemSpec{Name: "dial", Portable: false}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "dial"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "combo", Type: "combination_lock", Room: "room1",
+		CombinationTarget: "dial", CombinationSteps: 3,
+	})
+	errs := ValidateSpec(spec)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestValidateSpecCombinationLockMissingTarget(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "combo", Type: "combination_lock", Room: "room1",
+		CombinationSteps: 3,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "combination_target is required")
+}
+
+func TestValidateSpecCombinationLockBadSteps(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["dial"] = ItemSpec{Name: "dial", Portable: false}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "dial"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "combo", Type: "combination_lock", Room: "room1",
+		CombinationTarget: "dial", CombinationSteps: 0,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "combination_steps must be > 0")
+}
+
+func TestValidateSpecCombinationLockTextsMismatch(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["dial"] = ItemSpec{Name: "dial", Portable: false}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "dial"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "combo", Type: "combination_lock", Room: "room1",
+		CombinationTarget: "dial", CombinationSteps: 3,
+		CombinationTexts: []string{"one", "two"},
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "combination_texts length")
+}
+
+// --- item_combine ---
+
+func TestValidateSpecItemCombineValid(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["rope"] = ItemSpec{Name: "rope", Portable: true}
+	spec.Items["hook"] = ItemSpec{Name: "hook", Portable: true}
+	spec.Items["grapple"] = ItemSpec{Name: "grappling hook", Portable: true}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "rope", "hook"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "craft", Type: "item_combine", Room: "room1",
+		CombineItemA: "rope", CombineItemB: "hook", CombineResult: "grapple",
+	})
+	errs := ValidateSpec(spec)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestValidateSpecItemCombineMissingItems(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "craft", Type: "item_combine", Room: "room1",
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "combine_item_a is required")
+	assertContains(t, errs, "combine_item_b is required")
+	assertContains(t, errs, "combine_result is required")
+}
+
+func TestValidateSpecItemCombineResultNotPortable(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["rope"] = ItemSpec{Name: "rope", Portable: true}
+	spec.Items["hook"] = ItemSpec{Name: "hook", Portable: true}
+	spec.Items["statue"] = ItemSpec{Name: "statue", Portable: false}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "rope", "hook"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "craft", Type: "item_combine", Room: "room1",
+		CombineItemA: "rope", CombineItemB: "hook", CombineResult: "statue",
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "should be portable")
+}
+
+func TestValidateSpecItemCombineResultInRoom(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["rope"] = ItemSpec{Name: "rope", Portable: true}
+	spec.Items["hook"] = ItemSpec{Name: "hook", Portable: true}
+	spec.Items["grapple"] = ItemSpec{Name: "grappling hook", Portable: true}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "rope", "hook", "grapple"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "craft", Type: "item_combine", Room: "room1",
+		CombineItemA: "rope", CombineItemB: "hook", CombineResult: "grapple",
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "should not be placed in room")
+}
+
+// --- counter_puzzle ---
+
+func TestValidateSpecCounterPuzzleValid(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["gem_a"] = ItemSpec{Name: "gem a", Portable: true}
+	spec.Items["gem_b"] = ItemSpec{Name: "gem b", Portable: true}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "gem_a", "gem_b"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "collect", Type: "counter_puzzle", Room: "room1",
+		CounterItems: []string{"gem_a", "gem_b"}, CounterTarget: 2,
+	})
+	errs := ValidateSpec(spec)
+	if len(errs) != 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestValidateSpecCounterPuzzleEmpty(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "collect", Type: "counter_puzzle", Room: "room1",
+		CounterTarget: 1,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "counter_items is required")
+}
+
+func TestValidateSpecCounterPuzzleBadTarget(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["gem"] = ItemSpec{Name: "gem", Portable: true}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "gem"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "collect", Type: "counter_puzzle", Room: "room1",
+		CounterItems: []string{"gem"}, CounterTarget: 0,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "counter_target must be > 0")
+}
+
+func TestValidateSpecCounterPuzzleTargetExceedsItems(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["gem"] = ItemSpec{Name: "gem", Portable: true}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "gem"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "collect", Type: "counter_puzzle", Room: "room1",
+		CounterItems: []string{"gem"}, CounterTarget: 5,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "exceeds counter_items count")
+}
+
+func TestValidateSpecCounterPuzzleNonPortable(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["lever"] = ItemSpec{Name: "lever", Portable: false}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Items: []string{"crown", "lever"}}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "collect", Type: "counter_puzzle", Room: "room1",
+		CounterItems: []string{"lever"}, CounterTarget: 1,
+	})
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "must be portable")
+}
+
 // --- helpers ---
 
 func minimalSpec() *StorySpec {

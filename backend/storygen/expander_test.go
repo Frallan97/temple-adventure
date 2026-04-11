@@ -445,6 +445,321 @@ func TestExpandTempleStory(t *testing.T) {
 	}
 }
 
+func TestExpandCombinationLock(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "vault",
+		Rooms: map[string]RoomSpec{
+			"vault":  {Name: "Vault", Description: "A vault.", Items: []string{"dial"}, DescriptionAfterPuzzle: "The safe is open."},
+			"secret": {Name: "Secret Room", Description: "A hidden room."},
+		},
+		Items: map[string]ItemSpec{
+			"dial": {Name: "combination dial", Aliases: []string{"dial"}, Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "safe_puzzle", Type: "combination_lock", Name: "Crack the Safe",
+				Description: "Turn the dial the right number of times.",
+				Room: "vault", CombinationTarget: "dial",
+				CombinationSteps: 3,
+				CombinationTexts: []string{"Click. First tumbler.", "Click. Second tumbler.", "The safe swings open!"},
+				UnlockDirection: "east", UnlockRoom: "secret",
+				CompletionText: "The safe swings open!",
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	// Puzzle should exist
+	puzzle := world.Puzzles["safe_puzzle"]
+	if puzzle == nil {
+		t.Fatal("puzzle not created")
+	}
+	if len(puzzle.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(puzzle.Steps))
+	}
+
+	// East should be locked
+	if _, ok := world.Rooms["vault"].Connections["east"]; ok {
+		t.Fatal("east should be locked initially")
+	}
+
+	// Dial should have interactions: solved guard + step 0 + step 1 + final step = 4
+	dial := world.Items["dial"]
+	if len(dial.Interactions) != 4 {
+		t.Fatalf("expected 4 interactions, got %d", len(dial.Interactions))
+	}
+
+	// First interaction is the solved guard
+	if dial.Interactions[0].Conditions[0].Key != "safe_puzzle_solved" {
+		t.Fatal("first interaction should be solved guard")
+	}
+
+	// Step 0 uses negated _started
+	step0 := dial.Interactions[1]
+	if !step0.Conditions[0].Negate {
+		t.Fatal("step 0 should negate _started condition")
+	}
+	if step0.Response != "Click. First tumbler." {
+		t.Fatalf("wrong step 0 response: %q", step0.Response)
+	}
+
+	// Final step sets solved
+	final := dial.Interactions[3]
+	hasSolved := false
+	for _, eff := range final.Effects {
+		if eff.Key == "safe_puzzle_solved" && eff.Value == true {
+			hasSolved = true
+		}
+	}
+	if !hasSolved {
+		t.Fatal("final step should set _solved")
+	}
+
+	// Conditional description
+	if len(world.Rooms["vault"].ConditionalDescriptions) == 0 {
+		t.Fatal("vault should have conditional description")
+	}
+}
+
+func TestExpandCombinationLockSingleStep(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "room",
+		Rooms: map[string]RoomSpec{
+			"room": {Name: "Room", Description: "A room.", Items: []string{"button"}},
+		},
+		Items: map[string]ItemSpec{
+			"button": {Name: "button", Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "press_puzzle", Type: "combination_lock", Name: "Press Button",
+				Room: "room", CombinationTarget: "button", CombinationVerb: "press",
+				CombinationSteps: 1, CompletionText: "Done!",
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	btn := world.Items["button"]
+	// Solved guard + single step = 2 interactions
+	if len(btn.Interactions) != 2 {
+		t.Fatalf("expected 2 interactions for single-step combo, got %d", len(btn.Interactions))
+	}
+
+	// Single step should set both started and solved
+	step := btn.Interactions[1]
+	hasStarted, hasSolved := false, false
+	for _, eff := range step.Effects {
+		if eff.Key == "press_puzzle_started" {
+			hasStarted = true
+		}
+		if eff.Key == "press_puzzle_solved" {
+			hasSolved = true
+		}
+	}
+	if !hasStarted || !hasSolved {
+		t.Fatal("single step should set both _started and _solved")
+	}
+}
+
+func TestExpandItemCombine(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "workshop",
+		Rooms: map[string]RoomSpec{
+			"workshop": {Name: "Workshop", Description: "A workshop.", Items: []string{"rope", "hook"}},
+		},
+		Items: map[string]ItemSpec{
+			"rope":            {Name: "rope", Aliases: []string{"rope"}, Portable: true},
+			"hook":            {Name: "iron hook", Aliases: []string{"hook"}, Portable: true},
+			"grappling_hook":  {Name: "grappling hook", Aliases: []string{"grapple"}, Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "craft_grapple", Type: "item_combine", Name: "Craft Grappling Hook",
+				Description: "Combine the rope and hook.",
+				Room: "workshop",
+				CombineItemA: "rope", CombineItemB: "hook", CombineResult: "grappling_hook",
+				CombineConsumeA: true, CombineConsumeB: true,
+				CombineText: "You tie the rope to the hook, creating a grappling hook!",
+				CombineFailText: "You need something to combine this with.",
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	// Result item should exist but not be in any room
+	if world.Items["grappling_hook"] == nil {
+		t.Fatal("result item should exist")
+	}
+	for _, room := range world.Rooms {
+		for _, itemID := range room.Items {
+			if itemID == "grappling_hook" {
+				t.Fatal("result item should not be in any room")
+			}
+		}
+	}
+
+	// Rope should have success + fail interactions
+	rope := world.Items["rope"]
+	if len(rope.Interactions) != 2 {
+		t.Fatalf("expected 2 interactions on rope, got %d", len(rope.Interactions))
+	}
+
+	// Success: requires both items
+	success := rope.Interactions[0]
+	if len(success.Conditions) != 2 {
+		t.Fatalf("expected 2 conditions, got %d", len(success.Conditions))
+	}
+	if success.Conditions[0].Type != "has_item" || success.Conditions[1].Type != "has_item" {
+		t.Fatal("both conditions should be has_item")
+	}
+
+	// Should add result and remove both ingredients
+	hasAdd, hasRemoveA, hasRemoveB := false, false, false
+	for _, eff := range success.Effects {
+		if eff.Type == "add_item" && eff.Key == "grappling_hook" {
+			hasAdd = true
+		}
+		if eff.Type == "remove_item" && eff.Key == "rope" {
+			hasRemoveA = true
+		}
+		if eff.Type == "remove_item" && eff.Key == "hook" {
+			hasRemoveB = true
+		}
+	}
+	if !hasAdd || !hasRemoveA || !hasRemoveB {
+		t.Fatal("should add result and remove both ingredients")
+	}
+
+	// Fail interaction
+	fail := rope.Interactions[1]
+	if fail.FailResponse != "You need something to combine this with." {
+		t.Fatalf("wrong fail response: %q", fail.FailResponse)
+	}
+
+	// Puzzle should exist
+	puzzle := world.Puzzles["craft_grapple"]
+	if puzzle == nil {
+		t.Fatal("puzzle not created")
+	}
+}
+
+func TestExpandCounterPuzzle(t *testing.T) {
+	spec := &StorySpec{
+		StartRoom: "cave",
+		Rooms: map[string]RoomSpec{
+			"cave":   {Name: "Crystal Cave", Description: "A cave.", Items: []string{"red_gem", "blue_gem", "green_gem"}, DescriptionAfterPuzzle: "The altar glows."},
+			"shrine": {Name: "Shrine", Description: "A shrine."},
+		},
+		Items: map[string]ItemSpec{
+			"red_gem":   {Name: "red gem", Aliases: []string{"red"}, Portable: true},
+			"blue_gem":  {Name: "blue gem", Aliases: []string{"blue"}, Portable: true},
+			"green_gem": {Name: "green gem", Aliases: []string{"green"}, Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "gem_collect", Type: "counter_puzzle", Name: "Collect the Gems",
+				Description:    "Use all three gems.",
+				Room:           "cave",
+				CounterItems:   []string{"red_gem", "blue_gem", "green_gem"},
+				CounterVerb:    "use",
+				CounterTarget:  3,
+				CounterItemTexts: map[string]string{
+					"red_gem":  "The red gem glows!",
+					"blue_gem": "The blue gem shimmers!",
+				},
+				CounterDefaultText:  "The gem activates!",
+				CounterConsumeItems: true,
+				UnlockDirection:     "north",
+				UnlockRoom:          "shrine",
+				CompletionText:      "All gems placed! The shrine opens!",
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	// Each gem should have 2 interactions (guard + use)
+	for _, gemID := range []string{"red_gem", "blue_gem", "green_gem"} {
+		gem := world.Items[gemID]
+		if len(gem.Interactions) != 2 {
+			t.Fatalf("%s: expected 2 interactions, got %d", gemID, len(gem.Interactions))
+		}
+
+		// Guard should check done=true
+		guard := gem.Interactions[0]
+		if guard.Conditions[1].Key != "gem_collect_"+gemID+"_done" {
+			t.Fatalf("%s: guard should check done var, got %q", gemID, guard.Conditions[1].Key)
+		}
+
+		// Success should increment counter
+		success := gem.Interactions[1]
+		hasIncrement := false
+		hasRemove := false
+		for _, eff := range success.Effects {
+			if eff.Type == "increment_var" && eff.Key == "gem_collect_count" {
+				hasIncrement = true
+			}
+			if eff.Type == "remove_item" && eff.Key == gemID {
+				hasRemove = true
+			}
+		}
+		if !hasIncrement {
+			t.Fatalf("%s: should increment counter", gemID)
+		}
+		if !hasRemove {
+			t.Fatalf("%s: should remove item (consume)", gemID)
+		}
+	}
+
+	// Custom response texts
+	red := world.Items["red_gem"]
+	if red.Interactions[1].Response != "The red gem glows!" {
+		t.Fatalf("red_gem should have custom text, got %q", red.Interactions[1].Response)
+	}
+	green := world.Items["green_gem"]
+	if green.Interactions[1].Response != "The gem activates!" {
+		t.Fatalf("green_gem should use default text, got %q", green.Interactions[1].Response)
+	}
+
+	// Puzzle step should use var_gte
+	puzzle := world.Puzzles["gem_collect"]
+	if puzzle == nil {
+		t.Fatal("puzzle not created")
+	}
+	if puzzle.Steps[0].Conditions[0].Type != "var_gte" {
+		t.Fatalf("puzzle step should use var_gte, got %q", puzzle.Steps[0].Conditions[0].Type)
+	}
+	if puzzle.Steps[0].Conditions[0].Value != 3 {
+		t.Fatalf("puzzle step target should be 3, got %v", puzzle.Steps[0].Conditions[0].Value)
+	}
+
+	// North should be locked
+	if _, ok := world.Rooms["cave"].Connections["north"]; ok {
+		t.Fatal("north should be locked initially")
+	}
+
+	// Conditional description
+	if len(world.Rooms["cave"].ConditionalDescriptions) == 0 {
+		t.Fatal("cave should have conditional description")
+	}
+}
+
 // templeStorySpec returns the existing Temple of the Sun as a StorySpec.
 func templeStorySpec() *StorySpec {
 	return &StorySpec{

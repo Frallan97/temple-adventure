@@ -35,7 +35,7 @@ type ItemSpec struct {
 // Only fields relevant to the chosen Type need to be populated.
 type PuzzleSpec struct {
 	ID             string `json:"id"`
-	Type           string `json:"type"` // "key_lock", "examine_learn", "fetch_quest", "timed_challenge", "win_condition"
+	Type           string `json:"type"` // "key_lock", "examine_learn", "fetch_quest", "timed_challenge", "win_condition", "combination_lock", "item_combine", "counter_puzzle"
 	Name           string `json:"name"`
 	Description    string `json:"description"`
 	Room           string `json:"room"`
@@ -77,6 +77,30 @@ type PuzzleSpec struct {
 	WinItem string `json:"win_item,omitempty"`
 	WinVerb string `json:"win_verb,omitempty"`
 	WinText string `json:"win_text,omitempty"`
+
+	// combination_lock: interact with CombinationTarget N times to solve
+	CombinationTarget string   `json:"combination_target,omitempty"`
+	CombinationVerb   string   `json:"combination_verb,omitempty"`
+	CombinationSteps  int      `json:"combination_steps,omitempty"`
+	CombinationTexts  []string `json:"combination_texts,omitempty"`
+
+	// item_combine: combine two inventory items into a new item
+	CombineItemA    string `json:"combine_item_a,omitempty"`
+	CombineItemB    string `json:"combine_item_b,omitempty"`
+	CombineResult   string `json:"combine_result,omitempty"`
+	CombineVerb     string `json:"combine_verb,omitempty"`
+	CombineConsumeA bool   `json:"combine_consume_a,omitempty"`
+	CombineConsumeB bool   `json:"combine_consume_b,omitempty"`
+	CombineText     string `json:"combine_text,omitempty"`
+	CombineFailText string `json:"combine_fail_text,omitempty"`
+
+	// counter_puzzle: accumulate interactions across multiple items
+	CounterItems        []string          `json:"counter_items,omitempty"`
+	CounterVerb         string            `json:"counter_verb,omitempty"`
+	CounterTarget       int               `json:"counter_target,omitempty"`
+	CounterItemTexts    map[string]string `json:"counter_item_texts,omitempty"`
+	CounterDefaultText  string            `json:"counter_default_text,omitempty"`
+	CounterConsumeItems bool              `json:"counter_consume_items,omitempty"`
 }
 
 // FailureEffectSpec is a simplified failure effect for timed challenges.
