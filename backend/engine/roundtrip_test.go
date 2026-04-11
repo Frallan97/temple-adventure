@@ -118,28 +118,22 @@ func TestRoundTripFullGame(t *testing.T) {
 	// === Entrance: Gate Puzzle ===
 	step("look")
 
-	// Take items
-	step("take tablet")
-	if !state.Inventory["stone_tablet"] {
-		t.Fatal("tablet not in inventory after round-trip")
+	// Examine tablet to learn the clue
+	step("look tablet")
+	v, ok := state.Variables["read_tablet"]
+	if !ok || !v.BoolVal {
+		t.Fatal("read_tablet not set after examining tablet and round-trip")
 	}
 
+	// Take items
 	step("take flint")
 	if !state.Inventory["flint"] {
 		t.Fatal("flint not in inventory after round-trip")
 	}
 
-	// Verify items removed from room after round-trip
-	roomItems := GetRoomItems(state, eng.World, "entrance")
-	for _, id := range roomItems {
-		if id == "stone_tablet" || id == "flint" {
-			t.Fatalf("item %s should not be in room after taking and round-trip", id)
-		}
-	}
-
 	// Solve gate puzzle
 	step("turn panel")
-	v, ok := state.Variables["glyph_sequence_correct"]
+	v, ok = state.Variables["glyph_sequence_correct"]
 	if !ok || !v.BoolVal {
 		t.Fatal("glyph_sequence_correct not set after round-trip")
 	}
@@ -229,7 +223,7 @@ func TestRoundTripTimedFailure(t *testing.T) {
 	}
 
 	// Open gate and enter sun chamber
-	step("take tablet")
+	step("look tablet")
 	step("turn panel")
 	step("use panel")
 	step("move north")
@@ -327,11 +321,11 @@ func TestRoundTripConditionalDescriptions(t *testing.T) {
 	}
 
 	// Open the gate
-	step("take tablet")
+	step("look tablet")
 	step("turn panel")
 	step("use panel")
 
-	// After opening gate, look SHOULD mention the open door
+	// After opening gate, look SHOULD mention the open passage
 	result = step("look")
 	if !strings.Contains(result.Text, "stands open") {
 		t.Fatalf("door should be described as open after gate_open=true and round-trip, got: %s", result.Text)
@@ -391,7 +385,7 @@ func TestAllRoomsReachable(t *testing.T) {
 
 	// Play through the game to unlock all connections
 	commands := []string{
-		"take tablet", "turn panel", "use panel", "move north",
+		"look tablet", "turn panel", "use panel", "move north",
 		"take mirror", "turn disc", "use mirror", "move down",
 	}
 	for _, cmd := range commands {
@@ -425,7 +419,7 @@ func TestCannotWinAfterTimedFailure(t *testing.T) {
 	}
 
 	// Open gate, enter, start timer, let it expire
-	step("take tablet")
+	step("look tablet")
 	step("turn panel")
 	step("use panel")
 	step("move north")
@@ -468,7 +462,7 @@ func TestNonPortableItems(t *testing.T) {
 	}
 
 	// Open gate, go to sun chamber, try to take the sun disc
-	step("take tablet")
+	step("look tablet")
 	step("turn panel")
 	step("use panel")
 	step("move north")

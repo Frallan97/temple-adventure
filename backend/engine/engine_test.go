@@ -122,13 +122,13 @@ func TestInventory(t *testing.T) {
 func TestFullGameWin(t *testing.T) {
 	engine, state := setupTestEngine(t)
 
-	// Step 1: Take the stone tablet (needed for glyph clue)
-	result := engine.ProcessCommand(state, "take tablet")
-	if !state.Inventory["stone_tablet"] {
-		t.Fatalf("Should have tablet, got: %s", result.Text)
+	// Step 1: Examine the stone tablet (sets read_tablet variable)
+	result := engine.ProcessCommand(state, "look tablet")
+	if !strings.Contains(result.Text, "serpent, sun, serpent") {
+		t.Fatalf("Should show clue, got: %s", result.Text)
 	}
 
-	// Step 2: Turn the glyph panel (using tablet clue)
+	// Step 2: Turn the glyph panel (using recalled tablet clue)
 	result = engine.ProcessCommand(state, "turn panel")
 	if !strings.Contains(result.Text, "serpent, sun, serpent") {
 		t.Fatalf("Should reference the sequence, got: %s", result.Text)
@@ -201,7 +201,7 @@ func TestTimedPuzzleFailure(t *testing.T) {
 	engine, state := setupTestEngine(t)
 
 	// Open the gate first
-	engine.ProcessCommand(state, "take tablet")
+	engine.ProcessCommand(state, "look tablet")
 	engine.ProcessCommand(state, "turn panel")
 	engine.ProcessCommand(state, "use panel")
 	engine.ProcessCommand(state, "move north")

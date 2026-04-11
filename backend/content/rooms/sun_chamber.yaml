@@ -1,9 +1,9 @@
 id: sun_chamber
 name: "The Sun Chamber"
 description: |
-  You enter a vast circular chamber. The ceiling rises high above, and at its
-  apex a golden sun disc is mounted on a rotating mechanism. A narrow crack
-  in the ceiling allows a shaft of natural sunlight to penetrate the gloom.
+  A vast circular chamber stretches before you. The ceiling rises high above,
+  and at its apex a golden sun disc is mounted on a rotating mechanism. A narrow
+  crack in the ceiling allows a shaft of natural sunlight to penetrate the gloom.
 
   The walls are lined with alcoves, each containing faded murals depicting
   Inti, the sun god. On the southern wall, a massive stone face is carved —
@@ -24,6 +24,11 @@ puzzles:
 hints:
   - condition:
       type: var_equals
+      key: "vault_open"
+      value: true
+    text: "A staircase leads down. Try moving down."
+  - condition:
+      type: var_equals
       key: "mirror_placed"
       value: true
     text: "The light illuminates a hidden passage. Look for a way down."
@@ -35,19 +40,44 @@ hints:
   - text: "The sun disc on the ceiling has a hole that could focus the sunlight. Try turning it."
 
 conditional_descriptions:
+  # Most specific state first — these use replace:true to swap the base description
   - condition:
       type: var_equals
-      key: "beam_active"
+      key: "vault_open"
       value: true
     text: |
-      A focused beam of sunlight now shines through the sun disc, striking
-      the pedestal in the center of the room.
-    replace: false
+      A vast circular chamber stretches around you. High above, the golden sun
+      disc channels a beam of sunlight down through its center. The beam strikes
+      the golden mirror on the pedestal, reflecting brilliantly toward the
+      southern wall.
+
+      The stone face on the southern wall blazes with golden light — its eyes
+      alive with the fire of Inti. Below it, the floor has split open to reveal
+      a narrow staircase descending into darkness.
+    replace: true
   - condition:
       type: var_equals
       key: "mirror_placed"
       value: true
     text: |
-      The golden mirror on the pedestal catches the beam of light and
-      redirects it toward the stone face on the southern wall.
-    replace: false
+      A vast circular chamber stretches around you. High above, the golden sun
+      disc channels a beam of sunlight down through its center. The beam strikes
+      the golden mirror on the pedestal, reflecting brilliantly toward the
+      southern wall.
+
+      The stone face on the southern wall blazes with golden light — its eyes
+      alive with the fire of Inti.
+    replace: true
+  - condition:
+      type: var_equals
+      key: "beam_active"
+      value: true
+    text: |
+      A vast circular chamber stretches around you. High above, the golden sun
+      disc channels a focused beam of sunlight down through its center. The
+      brilliant beam strikes the empty pedestal in the center of the room.
+
+      The walls are lined with alcoves containing faded murals of Inti. On the
+      southern wall, a massive stone face is carved — its eyes dark and hollow.
+      Something about the pedestal's indent suggests a mirror might fit there.
+    replace: true

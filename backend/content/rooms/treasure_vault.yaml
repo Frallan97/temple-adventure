@@ -1,11 +1,11 @@
 id: treasure_vault
 name: "The Treasure Vault"
 description: |
-  You descend a narrow stone staircase into a chamber that takes your breath
-  away. Golden artifacts line the walls — ceremonial masks, jeweled daggers,
-  and ornate vessels that haven't seen light in centuries. At the center of
-  the vault, atop a stone altar, rests the legendary Sun Crown of the Inca —
-  a magnificent golden headdress studded with emeralds and rubies.
+  Golden artifacts line the walls of this hidden chamber — ceremonial masks,
+  jeweled daggers, and ornate vessels that haven't seen light in centuries.
+  At the center of the vault, atop a stone altar, rests the legendary Sun
+  Crown of the Inca — a magnificent golden headdress studded with emeralds
+  and rubies.
 
   The air is thick with the weight of history. You've found it.
 
@@ -31,5 +31,7 @@ conditional_descriptions:
       key: "crown_taken"
       value: true
     text: |
-      The altar stands empty. The Sun Crown is yours.
-    replace: false
+      Golden artifacts line the walls of this hidden chamber — ceremonial masks,
+      jeweled daggers, and ornate vessels. The stone altar at the center stands
+      empty. The Sun Crown is yours.
+    replace: true

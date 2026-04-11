@@ -45,6 +45,11 @@ conditional_descriptions:
       key: "gate_open"
       value: true
     text: |
+      You stand before an ancient Inca temple carved into the mountainside.
+      Weathered stone steps lead up to a massive doorway flanked by two serpent
+      statues. Vines and moss cover much of the facade, but the craftsmanship
+      beneath is unmistakable.
+
       The massive stone door stands open, revealing a dark passage leading
       north into the heart of the temple.
-    replace: false
+    replace: true

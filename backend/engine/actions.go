@@ -327,11 +327,18 @@ func describeRoom(state *WorldState, world *WorldDefinition) string {
 	desc := room.Description
 
 	// Apply conditional descriptions
+	// First check for a replace match (first wins), then append non-replace matches
+	replaced := false
 	for _, cd := range room.ConditionalDescriptions {
-		if EvaluateCondition(state, cd.Condition) {
-			if cd.Replace {
-				desc = cd.Text
-			} else {
+		if EvaluateCondition(state, cd.Condition) && cd.Replace {
+			desc = cd.Text
+			replaced = true
+			break
+		}
+	}
+	if !replaced {
+		for _, cd := range room.ConditionalDescriptions {
+			if !cd.Replace && EvaluateCondition(state, cd.Condition) {
 				desc = desc + "\n" + cd.Text
 			}
 		}
