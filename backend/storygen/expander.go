@@ -1,0 +1,511 @@
+package storygen
+
+import (
+	"fmt"
+
+	"temple-adventure/engine"
+)
+
+// Expand converts a StorySpec into a fully wired WorldDefinition.
+func Expand(spec *StorySpec) (*engine.WorldDefinition, error) {
+	e := &expander{
+		spec: spec,
+		world: &engine.WorldDefinition{
+			Rooms:   make(map[string]*engine.RoomDef),
+			Items:   make(map[string]*engine.ItemDef),
+			Puzzles: make(map[string]*engine.PuzzleDef),
+		},
+	}
+
+	e.buildRooms()
+	e.buildItems()
+
+	for i := range spec.Puzzles {
+		ps := &spec.Puzzles[i]
+		var err error
+		switch ps.Type {
+		case "key_lock":
+			err = e.expandKeyLock(ps)
+		case "examine_learn":
+			err = e.expandExamineLearn(ps)
+		case "fetch_quest":
+			err = e.expandFetchQuest(ps)
+		case "timed_challenge":
+			err = e.expandTimedChallenge(ps)
+		case "win_condition":
+			err = e.expandWinCondition(ps)
+		default:
+			err = fmt.Errorf("unknown puzzle type %q", ps.Type)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("expanding puzzle %q: %w", ps.ID, err)
+		}
+	}
+
+	return e.world, nil
+}
+
+type expander struct {
+	spec  *StorySpec
+	world *engine.WorldDefinition
+}
+
+func (e *expander) buildRooms() {
+	for id, rs := range e.spec.Rooms {
+		conns := make(map[string]string)
+		for k, v := range rs.Connections {
+			conns[k] = v
+		}
+		e.world.Rooms[id] = &engine.RoomDef{
+			ID:          id,
+			Name:        rs.Name,
+			Description: rs.Description,
+			Connections: conns,
+			Items:       append([]string{}, rs.Items...),
+		}
+	}
+}
+
+func (e *expander) buildItems() {
+	for id, is := range e.spec.Items {
+		item := &engine.ItemDef{
+			ID:          id,
+			Name:        is.Name,
+			Description: is.Description,
+			Aliases:     append([]string{}, is.Aliases...),
+			Portable:    is.Portable,
+		}
+		if is.ExamineText != "" {
+			item.Interactions = append(item.Interactions, engine.Interaction{
+				Verb:     "examine",
+				Response: is.ExamineText,
+			})
+		}
+		e.world.Items[id] = item
+	}
+}
+
+func (e *expander) expandKeyLock(ps *PuzzleSpec) error {
+	verb := or(ps.LockVerb, "use")
+	unlockedVar := ps.ID + "_unlocked"
+
+	item := e.world.Items[ps.LockTarget]
+	if item == nil {
+		return fmt.Errorf("lock_target item %q not found", ps.LockTarget)
+	}
+
+	// Success: has key + in room → unlock
+	item.Interactions = append(item.Interactions, engine.Interaction{
+		Verb: verb,
+		Conditions: []engine.Condition{
+			{Type: "has_item", Key: ps.KeyItem},
+			{Type: "in_room", Key: ps.Room},
+		},
+		Effects: []engine.Effect{
+			{Type: "set_var", Key: unlockedVar, Value: true},
+			{Type: "remove_item", Key: ps.KeyItem},
+		},
+		Response: ps.CompletionText,
+	})
+
+	// Fail: wrong conditions
+	if ps.LockFailText != "" {
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb: verb,
+			Conditions: []engine.Condition{
+				{Type: "in_room", Key: ps.Room},
+			},
+			FailResponse: ps.LockFailText,
+		})
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:          ps.ID,
+		Name:        ps.Name,
+		Description: ps.Description,
+		Steps: []engine.PuzzleStep{
+			{
+				StepID: "unlock",
+				Prompt: ps.Description,
+				Conditions: []engine.Condition{
+					{Type: "var_equals", Key: unlockedVar, Value: true},
+				},
+				Effects: []engine.Effect{
+					{Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom},
+				},
+			},
+		},
+		CompletionText: ps.CompletionText,
+	}
+
+	e.removeLockAndRegister(ps.Room, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
+	e.addConditionalDesc(ps.Room, unlockedVar)
+
+	return nil
+}
+
+func (e *expander) expandExamineLearn(ps *PuzzleSpec) error {
+	learnedVar := ps.ID + "_learned"
+	solvedVar := ps.ID + "_solved"
+	targetVerb := or(ps.TargetVerb, "use")
+
+	srcItem := e.world.Items[ps.SourceItem]
+	if srcItem == nil {
+		return fmt.Errorf("source_item %q not found", ps.SourceItem)
+	}
+	tgtItem := e.world.Items[ps.TargetItem]
+	if tgtItem == nil {
+		return fmt.Errorf("target_item %q not found", ps.TargetItem)
+	}
+
+	// Examine source → learn
+	srcItem.Interactions = append(srcItem.Interactions, engine.Interaction{
+		Verb: "examine",
+		Effects: []engine.Effect{
+			{Type: "set_var", Key: learnedVar, Value: true},
+		},
+		Response: ps.SourceLearnText,
+	})
+
+	// Interact with target → solve (requires learned)
+	solveInteraction := engine.Interaction{
+		Verb: targetVerb,
+		Conditions: []engine.Condition{
+			{Type: "var_equals", Key: learnedVar, Value: true},
+		},
+		Effects: []engine.Effect{
+			{Type: "set_var", Key: solvedVar, Value: true},
+		},
+		Response:     ps.TargetSuccessText,
+		FailResponse: ps.TargetFailText,
+	}
+
+	steps := []engine.PuzzleStep{
+		{
+			StepID:     "learn",
+			Prompt:     "Find and examine the clue.",
+			Conditions: []engine.Condition{{Type: "var_equals", Key: learnedVar, Value: true}},
+		},
+		{
+			StepID:     "solve",
+			Prompt:     "Use what you learned.",
+			Conditions: []engine.Condition{{Type: "var_equals", Key: solvedVar, Value: true}},
+		},
+	}
+
+	condVar := solvedVar
+
+	// If also unlocks a direction, add unlock mechanic
+	if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
+		unlockVerb := or(ps.LockVerb, "use")
+
+		if unlockVerb != targetVerb {
+			// Two separate interactions: solve verb + unlock verb
+			// e.g., "turn panel" (solve) then "use panel" (unlock)
+			unlockedVar := ps.ID + "_unlocked"
+			condVar = unlockedVar
+
+			tgtItem.Interactions = append(tgtItem.Interactions, solveInteraction)
+			tgtItem.Interactions = append(tgtItem.Interactions, engine.Interaction{
+				Verb: unlockVerb,
+				Conditions: []engine.Condition{
+					{Type: "var_equals", Key: solvedVar, Value: true},
+				},
+				Effects: []engine.Effect{
+					{Type: "set_var", Key: unlockedVar, Value: true},
+					{Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom},
+				},
+				Response:     ps.CompletionText,
+				FailResponse: ps.LockFailText,
+			})
+
+			steps = append(steps, engine.PuzzleStep{
+				StepID:     "unlock",
+				Prompt:     "Activate the mechanism.",
+				Conditions: []engine.Condition{{Type: "var_equals", Key: unlockedVar, Value: true}},
+			})
+		} else {
+			// Same verb handles solve + unlock in one step
+			solveInteraction.Effects = append(solveInteraction.Effects,
+				engine.Effect{Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom},
+			)
+			tgtItem.Interactions = append(tgtItem.Interactions, solveInteraction)
+
+			// Add unlock effects to the solve puzzle step
+			steps[len(steps)-1].Effects = []engine.Effect{
+				{Type: "unlock_connection", Key: ps.Room + "." + ps.UnlockDirection, Value: ps.UnlockRoom},
+			}
+		}
+
+		e.removeLockAndRegister(ps.Room, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
+	} else {
+		tgtItem.Interactions = append(tgtItem.Interactions, solveInteraction)
+		if room := e.world.Rooms[ps.Room]; room != nil {
+			room.Puzzles = append(room.Puzzles, ps.ID)
+		}
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:             ps.ID,
+		Name:           ps.Name,
+		Description:    ps.Description,
+		Steps:          steps,
+		CompletionText: ps.CompletionText,
+	}
+
+	e.addConditionalDesc(ps.Room, condVar)
+
+	return nil
+}
+
+func (e *expander) expandFetchQuest(ps *PuzzleSpec) error {
+	placedVar := ps.ID + "_placed"
+	fetchVerb := or(ps.FetchVerb, "use")
+	fetchRoom := or(ps.FetchRoom, ps.Room)
+
+	item := e.world.Items[ps.FetchItem]
+	if item == nil {
+		return fmt.Errorf("fetch_item %q not found", ps.FetchItem)
+	}
+
+	effects := []engine.Effect{
+		{Type: "set_var", Key: placedVar, Value: true},
+	}
+	if ps.FetchConsumeItem {
+		effects = append(effects, engine.Effect{Type: "remove_item", Key: ps.FetchItem})
+	}
+
+	item.Interactions = append(item.Interactions, engine.Interaction{
+		Verb: fetchVerb,
+		Conditions: []engine.Condition{
+			{Type: "has_item", Key: ps.FetchItem},
+			{Type: "in_room", Key: fetchRoom},
+		},
+		Effects:  effects,
+		Response: ps.FetchSuccessText,
+	})
+
+	var stepEffects []engine.Effect
+	if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
+		stepEffects = append(stepEffects, engine.Effect{
+			Type: "unlock_connection", Key: fetchRoom + "." + ps.UnlockDirection, Value: ps.UnlockRoom,
+		})
+		e.removeLockAndRegister(fetchRoom, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
+	} else {
+		if room := e.world.Rooms[ps.Room]; room != nil {
+			room.Puzzles = append(room.Puzzles, ps.ID)
+		}
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:          ps.ID,
+		Name:        ps.Name,
+		Description: ps.Description,
+		Steps: []engine.PuzzleStep{
+			{
+				StepID:     "place",
+				Prompt:     ps.Description,
+				Conditions: []engine.Condition{{Type: "var_equals", Key: placedVar, Value: true}},
+				Effects:    stepEffects,
+			},
+		},
+		CompletionText: ps.CompletionText,
+	}
+
+	e.addConditionalDesc(fetchRoom, placedVar)
+
+	return nil
+}
+
+func (e *expander) expandTimedChallenge(ps *PuzzleSpec) error {
+	triggerVerb := or(ps.TriggerVerb, "turn")
+	startedVar := "puzzle." + ps.ID + ".started"
+	startTurnVar := "puzzle." + ps.ID + ".start_turn"
+
+	triggerItem := e.world.Items[ps.TriggerItem]
+	if triggerItem == nil {
+		return fmt.Errorf("trigger_item %q not found", ps.TriggerItem)
+	}
+
+	// Start timer interaction
+	triggerItem.Interactions = append(triggerItem.Interactions, engine.Interaction{
+		Verb: triggerVerb,
+		Conditions: []engine.Condition{
+			{Type: "var_equals", Key: startedVar, Value: true, Negate: true},
+		},
+		Effects: []engine.Effect{
+			{Type: "set_var", Key: startedVar, Value: true},
+			{Type: "set_var", Key: startTurnVar, Value: "__CURRENT_TURN__"},
+		},
+		Response: ps.TriggerText,
+	})
+
+	// Already activated
+	triggerItem.Interactions = append(triggerItem.Interactions, engine.Interaction{
+		Verb: triggerVerb,
+		Conditions: []engine.Condition{
+			{Type: "var_equals", Key: startedVar, Value: true},
+		},
+		Response: "It's already been activated.",
+	})
+
+	// Convert failure effects
+	var failureEffects []engine.Effect
+	for _, fe := range ps.FailureEffects {
+		switch fe.Type {
+		case "move_player":
+			failureEffects = append(failureEffects, engine.Effect{Type: "move_player", Value: fe.Room})
+		case "lock_connection":
+			failureEffects = append(failureEffects, engine.Effect{Type: "lock_connection", Key: fe.Room + "." + fe.Direction})
+		}
+	}
+
+	// Steps: activate first
+	steps := []engine.PuzzleStep{
+		{
+			StepID:     "activate",
+			Prompt:     "Activate the mechanism.",
+			Conditions: []engine.Condition{{Type: "var_equals", Key: startedVar, Value: true}},
+		},
+	}
+
+	// If fetch fields present, add fetch mechanic
+	if ps.FetchItem != "" {
+		placedVar := ps.ID + "_placed"
+		fetchVerb := or(ps.FetchVerb, "use")
+		fetchRoom := or(ps.FetchRoom, ps.Room)
+
+		fetchItem := e.world.Items[ps.FetchItem]
+		if fetchItem == nil {
+			return fmt.Errorf("fetch_item %q not found", ps.FetchItem)
+		}
+
+		fetchEffects := []engine.Effect{
+			{Type: "set_var", Key: placedVar, Value: true},
+		}
+		if ps.FetchConsumeItem {
+			fetchEffects = append(fetchEffects, engine.Effect{Type: "remove_item", Key: ps.FetchItem})
+		}
+
+		fetchItem.Interactions = append(fetchItem.Interactions, engine.Interaction{
+			Verb: fetchVerb,
+			Conditions: []engine.Condition{
+				{Type: "in_room", Key: fetchRoom},
+				{Type: "var_equals", Key: startedVar, Value: true},
+			},
+			Effects:  fetchEffects,
+			Response: ps.FetchSuccessText,
+		})
+
+		var solveEffects []engine.Effect
+		if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
+			solveEffects = append(solveEffects, engine.Effect{
+				Type: "unlock_connection", Key: fetchRoom + "." + ps.UnlockDirection, Value: ps.UnlockRoom,
+			})
+			if room := e.world.Rooms[fetchRoom]; room != nil {
+				delete(room.Connections, ps.UnlockDirection)
+			}
+			addReverseConnection(e.world, ps.UnlockRoom, ps.UnlockDirection, fetchRoom)
+		}
+
+		steps = append(steps, engine.PuzzleStep{
+			StepID:     "solve",
+			Prompt:     "Complete the challenge before time runs out.",
+			Conditions: []engine.Condition{{Type: "var_equals", Key: placedVar, Value: true}},
+			Effects:    solveEffects,
+		})
+	}
+
+	e.world.Puzzles[ps.ID] = &engine.PuzzleDef{
+		ID:             ps.ID,
+		Name:           ps.Name,
+		Description:    ps.Description,
+		Steps:          steps,
+		TimedWindow:    &engine.TimedWindow{StartTrigger: startedVar, TurnLimit: ps.TurnLimit},
+		FailureEffects: failureEffects,
+		FailureText:    ps.FailureText,
+		CompletionText: ps.CompletionText,
+	}
+
+	if room := e.world.Rooms[ps.Room]; room != nil {
+		room.Puzzles = append(room.Puzzles, ps.ID)
+	}
+
+	return nil
+}
+
+func (e *expander) expandWinCondition(ps *PuzzleSpec) error {
+	winVerb := or(ps.WinVerb, "take")
+
+	item := e.world.Items[ps.WinItem]
+	if item == nil {
+		return fmt.Errorf("win_item %q not found", ps.WinItem)
+	}
+
+	item.Interactions = append(item.Interactions, engine.Interaction{
+		Verb: winVerb,
+		Effects: []engine.Effect{
+			{Type: "set_var", Key: "game_won", Value: true},
+			{Type: "set_status", Value: "completed"},
+		},
+		Response: ps.WinText,
+	})
+
+	return nil
+}
+
+// removeLockAndRegister removes a connection from the base room (it starts locked),
+// adds the reverse connection, and registers the puzzle on the room.
+func (e *expander) removeLockAndRegister(roomID, direction, targetRoomID, puzzleID string) {
+	if room := e.world.Rooms[roomID]; room != nil {
+		delete(room.Connections, direction)
+		room.Puzzles = append(room.Puzzles, puzzleID)
+	}
+	addReverseConnection(e.world, targetRoomID, direction, roomID)
+}
+
+// addConditionalDesc adds a replace:true conditional description to a room
+// when the given variable becomes true, using the room's DescriptionAfterPuzzle.
+func (e *expander) addConditionalDesc(roomID, condVar string) {
+	roomSpec, ok := e.spec.Rooms[roomID]
+	if !ok || roomSpec.DescriptionAfterPuzzle == "" {
+		return
+	}
+	room := e.world.Rooms[roomID]
+	if room == nil {
+		return
+	}
+	// Prepend so more specific (later puzzle) descriptions come first
+	room.ConditionalDescriptions = append([]engine.ConditionalText{
+		{
+			Condition: engine.Condition{Type: "var_equals", Key: condVar, Value: true},
+			Text:      roomSpec.DescriptionAfterPuzzle,
+			Replace:   true,
+		},
+	}, room.ConditionalDescriptions...)
+}
+
+// addReverseConnection ensures the target room has a connection back.
+func addReverseConnection(world *engine.WorldDefinition, targetRoomID, direction, sourceRoomID string) {
+	rev, ok := reverseDirection[direction]
+	if !ok {
+		return
+	}
+	targetRoom := world.Rooms[targetRoomID]
+	if targetRoom == nil {
+		return
+	}
+	if _, exists := targetRoom.Connections[rev]; !exists {
+		if targetRoom.Connections == nil {
+			targetRoom.Connections = make(map[string]string)
+		}
+		targetRoom.Connections[rev] = sourceRoomID
+	}
+}
+
+func or(val, fallback string) string {
+	if val != "" {
+		return val
+	}
+	return fallback
+}

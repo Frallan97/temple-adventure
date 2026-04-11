@@ -354,3 +354,70 @@ func (r *StoryRepository) LoadWorldDefinition(ctx context.Context, storyID uuid.
 
 	return world, nil
 }
+
+// SaveWorldDefinition inserts all rooms, items, and puzzles for a story
+// within an existing transaction.
+func (r *StoryRepository) SaveWorldDefinition(ctx context.Context, tx *sql.Tx, storyID string, world *engine.WorldDefinition) error {
+	for roomID, room := range world.Rooms {
+		connections, _ := json.Marshal(room.Connections)
+		items, _ := json.Marshal(room.Items)
+		puzzles, _ := json.Marshal(room.Puzzles)
+		condDescs, _ := json.Marshal(room.ConditionalDescriptions)
+		hints, _ := json.Marshal(room.Hints)
+
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO story_rooms (story_id, room_id, name, description, connections, items, puzzles, conditional_descriptions, hints)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 ON CONFLICT (story_id, room_id) DO UPDATE SET
+			   name = EXCLUDED.name, description = EXCLUDED.description,
+			   connections = EXCLUDED.connections, items = EXCLUDED.items,
+			   puzzles = EXCLUDED.puzzles, conditional_descriptions = EXCLUDED.conditional_descriptions,
+			   hints = EXCLUDED.hints`,
+			storyID, roomID, room.Name, room.Description, connections, items, puzzles, condDescs, hints,
+		)
+		if err != nil {
+			return fmt.Errorf("inserting room %s: %w", roomID, err)
+		}
+	}
+
+	for itemID, item := range world.Items {
+		aliases, _ := json.Marshal(item.Aliases)
+		interactions, _ := json.Marshal(item.Interactions)
+		condDescs, _ := json.Marshal(item.ConditionalDescriptions)
+
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO story_items (story_id, item_id, name, aliases, description, portable, interactions, conditional_descriptions)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			 ON CONFLICT (story_id, item_id) DO UPDATE SET
+			   name = EXCLUDED.name, aliases = EXCLUDED.aliases,
+			   description = EXCLUDED.description, portable = EXCLUDED.portable,
+			   interactions = EXCLUDED.interactions, conditional_descriptions = EXCLUDED.conditional_descriptions`,
+			storyID, itemID, item.Name, aliases, item.Description, item.Portable, interactions, condDescs,
+		)
+		if err != nil {
+			return fmt.Errorf("inserting item %s: %w", itemID, err)
+		}
+	}
+
+	for puzzleID, puzzle := range world.Puzzles {
+		steps, _ := json.Marshal(puzzle.Steps)
+		timedWindow, _ := json.Marshal(puzzle.TimedWindow)
+		failureEffects, _ := json.Marshal(puzzle.FailureEffects)
+
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO story_puzzles (story_id, puzzle_id, name, description, steps, timed_window, failure_effects, failure_text, completion_text)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			 ON CONFLICT (story_id, puzzle_id) DO UPDATE SET
+			   name = EXCLUDED.name, description = EXCLUDED.description,
+			   steps = EXCLUDED.steps, timed_window = EXCLUDED.timed_window,
+			   failure_effects = EXCLUDED.failure_effects, failure_text = EXCLUDED.failure_text,
+			   completion_text = EXCLUDED.completion_text`,
+			storyID, puzzleID, puzzle.Name, puzzle.Description, steps, timedWindow, failureEffects, puzzle.FailureText, puzzle.CompletionText,
+		)
+		if err != nil {
+			return fmt.Errorf("inserting puzzle %s: %w", puzzleID, err)
+		}
+	}
+
+	return nil
+}

@@ -47,7 +47,10 @@ func main() {
 	storyService := services.NewStoryService(storyRepo, gameService.Cache())
 	storyHandler := handlers.NewStoryHandler(storyService, debug)
 
-	router := handlers.SetupRouter(cfg, gameHandler, storyHandler)
+	// Spec handler (create stories from StorySpec building blocks)
+	specHandler := handlers.NewSpecHandler(storyRepo, database.DB, debug)
+
+	router := handlers.SetupRouter(cfg, gameHandler, storyHandler, specHandler)
 
 	addr := ":" + cfg.Port
 	log.Printf("Starting server on %s (Environment: %s)", addr, cfg.Environment)

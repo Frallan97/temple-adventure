@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 
@@ -56,54 +55,9 @@ func SeedDefaultStory(ctx context.Context, db *sql.DB, contentDir string) error 
 		return fmt.Errorf("inserting story: %w", err)
 	}
 
-	// Insert rooms
-	for roomID, room := range world.Rooms {
-		connections, _ := json.Marshal(room.Connections)
-		items, _ := json.Marshal(room.Items)
-		puzzles, _ := json.Marshal(room.Puzzles)
-		condDescs, _ := json.Marshal(room.ConditionalDescriptions)
-		hints, _ := json.Marshal(room.Hints)
-
-		_, err = tx.ExecContext(ctx,
-			`INSERT INTO story_rooms (story_id, room_id, name, description, connections, items, puzzles, conditional_descriptions, hints)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			storyID, roomID, room.Name, room.Description, connections, items, puzzles, condDescs, hints,
-		)
-		if err != nil {
-			return fmt.Errorf("inserting room %s: %w", roomID, err)
-		}
-	}
-
-	// Insert items
-	for itemID, item := range world.Items {
-		aliases, _ := json.Marshal(item.Aliases)
-		interactions, _ := json.Marshal(item.Interactions)
-		condDescs, _ := json.Marshal(item.ConditionalDescriptions)
-
-		_, err = tx.ExecContext(ctx,
-			`INSERT INTO story_items (story_id, item_id, name, aliases, description, portable, interactions, conditional_descriptions)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			storyID, itemID, item.Name, aliases, item.Description, item.Portable, interactions, condDescs,
-		)
-		if err != nil {
-			return fmt.Errorf("inserting item %s: %w", itemID, err)
-		}
-	}
-
-	// Insert puzzles
-	for puzzleID, puzzle := range world.Puzzles {
-		steps, _ := json.Marshal(puzzle.Steps)
-		timedWindow, _ := json.Marshal(puzzle.TimedWindow)
-		failureEffects, _ := json.Marshal(puzzle.FailureEffects)
-
-		_, err = tx.ExecContext(ctx,
-			`INSERT INTO story_puzzles (story_id, puzzle_id, name, description, steps, timed_window, failure_effects, failure_text, completion_text)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			storyID, puzzleID, puzzle.Name, puzzle.Description, steps, timedWindow, failureEffects, puzzle.FailureText, puzzle.CompletionText,
-		)
-		if err != nil {
-			return fmt.Errorf("inserting puzzle %s: %w", puzzleID, err)
-		}
+	// Insert world content using shared helper
+	if err := repo.SaveWorldDefinition(ctx, tx, storyID, world); err != nil {
+		return fmt.Errorf("saving world definition: %w", err)
 	}
 
 	// Backfill existing sessions

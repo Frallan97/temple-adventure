@@ -10,7 +10,7 @@ import (
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *StoryHandler) http.Handler {
+func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *StoryHandler, specHandler *SpecHandler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(chiMiddleware.RequestID)
@@ -33,6 +33,7 @@ func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *Sto
 		// Story endpoints
 		r.Get("/stories", storyHandler.ListStories)
 		r.Post("/stories", storyHandler.CreateStory)
+		r.Post("/stories/from-spec", specHandler.CreateFromSpec)
 		r.Route("/stories/{storyId}", func(r chi.Router) {
 			r.Get("/", storyHandler.GetStory)
 			r.Put("/", storyHandler.UpdateStory)
