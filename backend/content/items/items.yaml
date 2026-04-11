@@ -7,7 +7,10 @@ items:
     interactions:
       - verb: "examine"
         conditions: []
-        effects: []
+        effects:
+          - type: set_var
+            key: "read_tablet"
+            value: true
         response: |
           You study the tablet carefully. The glyphs tell a story:
           "Turn the eye of Inti to release his gaze. Place the golden
@@ -54,14 +57,15 @@ items:
         fail_response: "The panel doesn't respond. Perhaps the symbols need to be in the right sequence first."
       - verb: "turn"
         conditions:
-          - type: has_item
-            key: "stone_tablet"
+          - type: var_equals
+            key: "read_tablet"
+            value: true
         effects:
           - type: set_var
             key: "glyph_sequence_correct"
             value: true
         response: |
-          Referencing the sequence on the stone tablet — serpent, sun, serpent —
+          Recalling the sequence from the stone tablet — serpent, sun, serpent —
           you carefully rotate each disc to match. The symbols align with a
           soft grinding sound. The panel seems ready to be activated.
         fail_response: "You turn the discs randomly but nothing happens. Maybe you need a clue for the right sequence."

@@ -33,8 +33,9 @@ hints:
       value: true
     text: "The glyphs are aligned. Try activating the panel."
   - condition:
-      type: has_item
-      key: "stone_tablet"
+      type: var_equals
+      key: "read_tablet"
+      value: true
     text: "The tablet shows a sequence of symbols. Perhaps the glyph panel beside the door can be turned to match?"
   - text: "There's a stone tablet near the entrance. It might hold a clue about the sealed door."
 
