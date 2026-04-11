@@ -151,7 +151,7 @@ items:
 
   sun_crown:
     name: "Sun Crown of the Inca"
-    aliases: ["crown", "headdress"]
+    aliases: ["crown", "sun crown", "sun crown of the inca", "headdress"]
     description: "A magnificent golden headdress studded with emeralds and rubies. It radiates an almost supernatural warmth."
     portable: true
     interactions:

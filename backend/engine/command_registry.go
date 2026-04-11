@@ -1,6 +1,9 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type ActionFunc func(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult
 
@@ -105,11 +108,11 @@ func matchesItem(world *WorldDefinition, itemID, target string) bool {
 	if !ok {
 		return false
 	}
-	if itemDef.Name == target {
+	if strings.EqualFold(itemDef.Name, target) {
 		return true
 	}
 	for _, alias := range itemDef.Aliases {
-		if alias == target {
+		if strings.EqualFold(alias, target) {
 			return true
 		}
 	}
