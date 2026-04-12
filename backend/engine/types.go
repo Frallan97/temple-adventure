@@ -103,10 +103,19 @@ type NpcDef struct {
 }
 
 type DialogueLine struct {
-	Topic      string      `yaml:"topic" json:"topic"`
-	Conditions []Condition `yaml:"conditions" json:"conditions"`
-	Response   string      `yaml:"response" json:"response"`
-	Effects    []Effect    `yaml:"effects" json:"effects"`
+	NodeID     string           `yaml:"node_id" json:"node_id,omitempty"`
+	Topic      string           `yaml:"topic" json:"topic"`
+	Conditions []Condition      `yaml:"conditions" json:"conditions"`
+	Response   string           `yaml:"response" json:"response"`
+	Effects    []Effect         `yaml:"effects" json:"effects"`
+	Choices    []DialogueChoice `yaml:"choices" json:"choices,omitempty"`
+}
+
+type DialogueChoice struct {
+	Text       string      `yaml:"text" json:"text"`
+	NextNode   string      `yaml:"next_node" json:"next_node"`
+	Conditions []Condition `yaml:"conditions" json:"conditions,omitempty"`
+	Effects    []Effect    `yaml:"effects" json:"effects,omitempty"`
 }
 
 type NpcMovement struct {
@@ -154,9 +163,17 @@ type ParsedCommand struct {
 }
 
 type CommandResult struct {
-	Text        string `json:"text"`
-	RoomChanged bool   `json:"room_changed"`
-	GameOver    bool   `json:"game_over"`
-	GameStatus  string `json:"game_status"`
-	TurnNumber  int    `json:"turn_number"`
+	Text        string         `json:"text"`
+	RoomChanged bool           `json:"room_changed"`
+	GameOver    bool           `json:"game_over"`
+	GameStatus  string         `json:"game_status"`
+	TurnNumber  int            `json:"turn_number"`
+	Choices     []ChoiceOption `json:"choices,omitempty"`
+	EndingID    string         `json:"ending_id,omitempty"`
+	EndingTitle string         `json:"ending_title,omitempty"`
+}
+
+type ChoiceOption struct {
+	Index int    `json:"index"`
+	Text  string `json:"text"`
 }

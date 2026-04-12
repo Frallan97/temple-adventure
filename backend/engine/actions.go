@@ -16,6 +16,7 @@ func RegisterBuiltinActions(registry *CommandRegistry) {
 	registry.Register("hint", actionHint)
 	registry.Register("talk", actionTalk)
 	registry.Register("ask", actionAsk)
+	registry.Register("say", actionSay)
 }
 
 func actionLook(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
@@ -340,11 +341,12 @@ func actionHelp(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *
   use <item>        - Use an item
   talk <npc>        - Talk to an NPC
   ask <npc> about <topic> - Ask an NPC about a topic
+  say <N>           - Choose a dialogue option (or just type the number)
   inventory         - List what you're carrying
   hint              - Get a hint for what to do next
   help              - Show this help
 
-Shortcuts: n/s/e/w (directions), i (inventory), l (look)
+Shortcuts: n/s/e/w (directions), i (inventory), l (look), 1-9 (dialogue choices)
 You can also try: push, pull, turn, open on objects in the room.`,
 		GameStatus: state.Status,
 		TurnNumber: state.TurnNumber,
@@ -370,17 +372,23 @@ func actionTalk(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *
 	}
 
 	npc := world.Npcs[npcID]
-	for _, dl := range npc.Dialogue {
+
+	// If already in a conversation with this NPC, resume at the current node
+	nodeVar := dlgNodeVar(npcID)
+	if v, ok := state.Variables[nodeVar]; ok && v.StrVal != "" {
+		if dl := findDialogueNode(npc, v.StrVal); dl != nil {
+			return resolveDialogueResult(state, npc, dl)
+		}
+	}
+
+	// Find first greeting (Topic="") where conditions pass
+	for i := range npc.Dialogue {
+		dl := &npc.Dialogue[i]
 		if dl.Topic != "" {
 			continue
 		}
 		if EvaluateConditions(state, dl.Conditions) {
-			ApplyEffects(state, dl.Effects)
-			return &CommandResult{
-				Text:       dl.Response,
-				GameStatus: state.Status,
-				TurnNumber: state.TurnNumber,
-			}
+			return resolveDialogueResult(state, npc, dl)
 		}
 	}
 
@@ -423,22 +431,192 @@ func actionAsk(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *C
 	}
 
 	npc := world.Npcs[npcID]
-	for _, dl := range npc.Dialogue {
+	for i := range npc.Dialogue {
+		dl := &npc.Dialogue[i]
 		if !strings.EqualFold(dl.Topic, topic) {
 			continue
 		}
 		if EvaluateConditions(state, dl.Conditions) {
-			ApplyEffects(state, dl.Effects)
-			return &CommandResult{
-				Text:       dl.Response,
-				GameStatus: state.Status,
-				TurnNumber: state.TurnNumber,
-			}
+			return resolveDialogueResult(state, npc, dl)
 		}
 	}
 
 	return &CommandResult{
 		Text:       fmt.Sprintf("The %s doesn't have anything to say about that.", npc.Name),
+		GameStatus: state.Status,
+		TurnNumber: state.TurnNumber,
+	}
+}
+
+func actionSay(state *WorldState, world *WorldDefinition, cmd *ParsedCommand) *CommandResult {
+	if cmd.Target == "" {
+		return &CommandResult{
+			Text:       "Say what? Use 'say <number>' to choose a dialogue option.",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	choiceIdx := 0
+	if _, err := fmt.Sscanf(cmd.Target, "%d", &choiceIdx); err != nil || choiceIdx < 1 {
+		return &CommandResult{
+			Text:       "Use 'say <number>' to choose a dialogue option (e.g., say 1).",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	// Find which NPC the player is in conversation with
+	npcID, currentNodeID := findActiveConversation(state)
+	if npcID == "" {
+		return &CommandResult{
+			Text:       "You're not in a conversation. Use 'talk <npc>' to start one.",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	npc := world.Npcs[npcID]
+	if npc == nil {
+		clearConversation(state, npcID)
+		return &CommandResult{
+			Text:       "You're not in a conversation.",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	currentNode := findDialogueNode(npc, currentNodeID)
+	if currentNode == nil {
+		clearConversation(state, npcID)
+		return &CommandResult{
+			Text:       "The conversation seems to have ended.",
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	// Filter choices by conditions (same as when displayed)
+	visibleChoices := filterChoices(state, currentNode.Choices)
+	if choiceIdx > len(visibleChoices) {
+		return &CommandResult{
+			Text:       fmt.Sprintf("Invalid choice. Pick a number between 1 and %d.", len(visibleChoices)),
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	chosen := visibleChoices[choiceIdx-1]
+
+	// Apply choice effects
+	ApplyEffects(state, chosen.Effects)
+
+	// Handle exit or empty next node
+	if chosen.NextNode == "" || chosen.NextNode == "__exit__" {
+		clearConversation(state, npcID)
+		return &CommandResult{
+			Text:       fmt.Sprintf("You end your conversation with the %s.", npc.Name),
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	// Advance to next node
+	nextNode := findDialogueNode(npc, chosen.NextNode)
+	if nextNode == nil {
+		clearConversation(state, npcID)
+		return &CommandResult{
+			Text:       fmt.Sprintf("The %s nods and the conversation ends.", npc.Name),
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	return resolveDialogueResult(state, npc, nextNode)
+}
+
+// --- Dialogue tree helpers ---
+
+func dlgNodeVar(npcID string) string {
+	return "dlg." + npcID + ".node"
+}
+
+func dlgVisitedVar(npcID, nodeID string) string {
+	return "dlg." + npcID + ".visited." + nodeID
+}
+
+func findDialogueNode(npc *NpcDef, nodeID string) *DialogueLine {
+	for i := range npc.Dialogue {
+		if npc.Dialogue[i].NodeID == nodeID {
+			return &npc.Dialogue[i]
+		}
+	}
+	return nil
+}
+
+func findActiveConversation(state *WorldState) (npcID, nodeID string) {
+	for key, v := range state.Variables {
+		if strings.HasPrefix(key, "dlg.") && strings.HasSuffix(key, ".node") && v.Type == "string" && v.StrVal != "" {
+			// Extract npcID from "dlg.<npcID>.node"
+			inner := strings.TrimPrefix(key, "dlg.")
+			inner = strings.TrimSuffix(inner, ".node")
+			return inner, v.StrVal
+		}
+	}
+	return "", ""
+}
+
+func clearConversation(state *WorldState, npcID string) {
+	delete(state.Variables, dlgNodeVar(npcID))
+}
+
+func filterChoices(state *WorldState, choices []DialogueChoice) []DialogueChoice {
+	var visible []DialogueChoice
+	for _, c := range choices {
+		if len(c.Conditions) == 0 || EvaluateConditions(state, c.Conditions) {
+			visible = append(visible, c)
+		}
+	}
+	return visible
+}
+
+func resolveDialogueResult(state *WorldState, npc *NpcDef, dl *DialogueLine) *CommandResult {
+	// Apply line effects
+	ApplyEffects(state, dl.Effects)
+
+	// Mark node as visited if it has a NodeID
+	if dl.NodeID != "" {
+		state.Variables[dlgVisitedVar(npc.ID, dl.NodeID)] = Variable{Type: "bool", BoolVal: true}
+	}
+
+	// Filter and build choices
+	visibleChoices := filterChoices(state, dl.Choices)
+
+	if len(visibleChoices) > 0 {
+		// Enter/continue conversation
+		nodeID := dl.NodeID
+		if nodeID == "" {
+			nodeID = "__root__"
+		}
+		state.Variables[dlgNodeVar(npc.ID)] = Variable{Type: "string", StrVal: nodeID}
+
+		var choiceOptions []ChoiceOption
+		for i, c := range visibleChoices {
+			choiceOptions = append(choiceOptions, ChoiceOption{Index: i + 1, Text: c.Text})
+		}
+
+		return &CommandResult{
+			Text:       dl.Response,
+			Choices:    choiceOptions,
+			GameStatus: state.Status,
+			TurnNumber: state.TurnNumber,
+		}
+	}
+
+	// No choices — conversation ends
+	clearConversation(state, npc.ID)
+	return &CommandResult{
+		Text:       dl.Response,
 		GameStatus: state.Status,
 		TurnNumber: state.TurnNumber,
 	}

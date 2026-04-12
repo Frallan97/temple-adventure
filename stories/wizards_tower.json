@@ -300,7 +300,7 @@
       "fetch_verb": "use",
       "fetch_room": "observatory",
       "fetch_success_text": "You slam the enchanted focusing lens into the orrery's mount! The lens catches the starlight beam and focuses it into a searing point of brilliance. The beam strikes the north door — the star-shaped locks glow white, then dissolve one by one.",
-      "fetch_consume_item": true,
+      "fetch_consume_item": false,
       "unlock_direction": "north",
       "unlock_room": "sanctum",
       "completion_text": "The orrery hums with perfect celestial harmony. The north door stands open, bathed in focused starlight. The sanctum awaits."

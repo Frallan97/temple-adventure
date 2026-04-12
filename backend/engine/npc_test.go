@@ -249,3 +249,343 @@ func TestAskNoAbout(t *testing.T) {
 		t.Errorf("ask without about should show usage, got: %s", result.Text)
 	}
 }
+
+// --- Dialogue tree tests ---
+
+func dialogueTreeWorld() *WorldDefinition {
+	return &WorldDefinition{
+		Rooms: map[string]*RoomDef{
+			"tavern": {
+				ID: "tavern", Name: "The Tavern",
+				Description: "A cozy tavern.",
+				Connections: map[string]string{},
+			},
+		},
+		Items: map[string]*ItemDef{
+			"coin": {ID: "coin", Name: "Gold Coin", Description: "A shiny coin.", Portable: true},
+		},
+		Puzzles: map[string]*PuzzleDef{},
+		Npcs: map[string]*NpcDef{
+			"barkeep": {
+				ID: "barkeep", Name: "Barkeep", Description: "A burly bartender.",
+				Aliases: []string{"bartender"},
+				Room:    "tavern",
+				Dialogue: []DialogueLine{
+					{
+						NodeID:   "greeting",
+						Topic:    "",
+						Response: "Welcome! What can I do for you?",
+						Choices: []DialogueChoice{
+							{Text: "Tell me about the specials", NextNode: "specials"},
+							{Text: "I heard you know a secret", NextNode: "secret_check"},
+							{Text: "Nothing, goodbye", NextNode: "__exit__"},
+						},
+					},
+					{
+						NodeID:   "specials",
+						Response: "We have ale and stew today. Both excellent!",
+						Choices: []DialogueChoice{
+							{Text: "I'll have the ale", NextNode: "ale_choice", Effects: []Effect{{Type: "set_var", Key: "ordered_ale", Value: true}}},
+							{Text: "Tell me more about the stew", NextNode: "stew_info"},
+						},
+					},
+					{
+						NodeID:   "ale_choice",
+						Response: "Good choice! Here's your ale.",
+						Effects:  []Effect{{Type: "set_var", Key: "has_ale", Value: true}},
+						// No choices — conversation ends automatically
+					},
+					{
+						NodeID:   "stew_info",
+						Response: "The stew is made with fresh vegetables from the market.",
+					},
+					{
+						NodeID:   "secret_check",
+						Response: "A secret, you say?",
+						Choices: []DialogueChoice{
+							{
+								Text:       "Yes, I have coin to pay for info",
+								NextNode:   "secret_reveal",
+								Conditions: []Condition{{Type: "has_item", Key: "coin"}},
+								Effects:    []Effect{{Type: "remove_item", Key: "coin"}},
+							},
+							{Text: "Nevermind", NextNode: "__exit__"},
+						},
+					},
+					{
+						NodeID:   "secret_reveal",
+						Response: "The treasure is buried under the old oak tree!",
+						Effects:  []Effect{{Type: "set_var", Key: "knows_treasure", Value: true}},
+					},
+					// Flat dialogue line (backward compat — no NodeID)
+					{Topic: "weather", Response: "Lovely day, isn't it?"},
+				},
+			},
+		},
+	}
+}
+
+func TestDialogueTreeTalkShowsChoices(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	result := eng.ProcessCommand(state, "talk barkeep")
+	if !strings.Contains(result.Text, "Welcome") {
+		t.Errorf("Expected greeting text, got: %s", result.Text)
+	}
+	if len(result.Choices) != 3 {
+		t.Fatalf("Expected 3 choices, got %d", len(result.Choices))
+	}
+	if result.Choices[0].Text != "Tell me about the specials" {
+		t.Errorf("Choice 1 wrong: %s", result.Choices[0].Text)
+	}
+	if result.Choices[0].Index != 1 {
+		t.Errorf("Choice 1 index should be 1, got %d", result.Choices[0].Index)
+	}
+}
+
+func TestDialogueTreeSayAdvancesToNextNode(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Start conversation
+	eng.ProcessCommand(state, "talk barkeep")
+
+	// Choose "Tell me about the specials"
+	result := eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "ale and stew") {
+		t.Errorf("Expected specials response, got: %s", result.Text)
+	}
+	if len(result.Choices) != 2 {
+		t.Fatalf("Expected 2 choices at specials node, got %d", len(result.Choices))
+	}
+}
+
+func TestDialogueTreeAutoExitOnNoChoices(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Start conversation → choose specials → choose ale (no choices = auto-exit)
+	eng.ProcessCommand(state, "talk barkeep")
+	eng.ProcessCommand(state, "say 1") // specials
+	result := eng.ProcessCommand(state, "say 1") // ale_choice
+
+	if !strings.Contains(result.Text, "Good choice") {
+		t.Errorf("Expected ale response, got: %s", result.Text)
+	}
+	if len(result.Choices) != 0 {
+		t.Errorf("Should have no choices (auto-exit), got %d", len(result.Choices))
+	}
+
+	// Verify conversation ended — say should fail
+	result = eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "not in a conversation") {
+		t.Errorf("Should not be in a conversation after auto-exit, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeExitNode(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	eng.ProcessCommand(state, "talk barkeep")
+	// Choose "Nothing, goodbye" → __exit__
+	result := eng.ProcessCommand(state, "say 3")
+
+	if !strings.Contains(result.Text, "end your conversation") {
+		t.Errorf("Expected exit message, got: %s", result.Text)
+	}
+
+	// Verify conversation cleared
+	result = eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "not in a conversation") {
+		t.Errorf("Should not be in conversation after exit, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeConditionalChoices(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Start conversation → choose "secret"
+	eng.ProcessCommand(state, "talk barkeep")
+	result := eng.ProcessCommand(state, "say 2") // secret_check
+
+	// Without coin, the "pay for info" choice should be hidden
+	if len(result.Choices) != 1 {
+		t.Fatalf("Without coin, should only see 1 choice (Nevermind), got %d", len(result.Choices))
+	}
+	if result.Choices[0].Text != "Nevermind" {
+		t.Errorf("Only visible choice should be Nevermind, got: %s", result.Choices[0].Text)
+	}
+}
+
+func TestDialogueTreeConditionalChoicesWithItem(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Give player the coin
+	state.Inventory["coin"] = true
+
+	eng.ProcessCommand(state, "talk barkeep")
+	result := eng.ProcessCommand(state, "say 2") // secret_check
+
+	// With coin, should see both choices
+	if len(result.Choices) != 2 {
+		t.Fatalf("With coin, should see 2 choices, got %d", len(result.Choices))
+	}
+
+	// Choose "pay for info" — should remove coin and reveal secret
+	result = eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "treasure is buried") {
+		t.Errorf("Expected secret reveal, got: %s", result.Text)
+	}
+
+	// Coin should be removed (choice effect)
+	if state.Inventory["coin"] {
+		t.Error("Coin should have been removed by choice effect")
+	}
+
+	// knows_treasure should be set (node effect)
+	v, ok := state.Variables["knows_treasure"]
+	if !ok || !v.BoolVal {
+		t.Error("knows_treasure should be set to true")
+	}
+}
+
+func TestDialogueTreeEffectsOnChoices(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	eng.ProcessCommand(state, "talk barkeep")
+	eng.ProcessCommand(state, "say 1") // specials
+	eng.ProcessCommand(state, "say 1") // ale (has effect: ordered_ale=true)
+
+	v, ok := state.Variables["ordered_ale"]
+	if !ok || !v.BoolVal {
+		t.Error("ordered_ale should be set by choice effect")
+	}
+
+	v2, ok := state.Variables["has_ale"]
+	if !ok || !v2.BoolVal {
+		t.Error("has_ale should be set by node effect")
+	}
+}
+
+func TestDialogueTreeSayNotInConversation(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	result := eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "not in a conversation") {
+		t.Errorf("Say without conversation should error, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeBareNumber(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	eng.ProcessCommand(state, "talk barkeep")
+	// Bare "1" should work as "say 1"
+	result := eng.ProcessCommand(state, "1")
+	if !strings.Contains(result.Text, "ale and stew") {
+		t.Errorf("Bare number should work as say, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeFlatDialogueStillWorks(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Flat topic-based dialogue (no NodeID) should work as before
+	result := eng.ProcessCommand(state, "ask barkeep about weather")
+	if !strings.Contains(result.Text, "Lovely day") {
+		t.Errorf("Flat dialogue should still work, got: %s", result.Text)
+	}
+	if len(result.Choices) != 0 {
+		t.Errorf("Flat dialogue should have no choices, got %d", len(result.Choices))
+	}
+}
+
+func TestDialogueTreeTalkResumesConversation(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	// Start conversation
+	eng.ProcessCommand(state, "talk barkeep")
+	// Navigate to specials
+	eng.ProcessCommand(state, "say 1")
+
+	// Talk again should resume at specials node (not restart)
+	result := eng.ProcessCommand(state, "talk barkeep")
+	if !strings.Contains(result.Text, "ale and stew") {
+		t.Errorf("Talk mid-conversation should resume, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeVisitedVariable(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	eng.ProcessCommand(state, "talk barkeep")
+
+	// greeting node should be marked visited
+	v, ok := state.Variables["dlg.barkeep.visited.greeting"]
+	if !ok || !v.BoolVal {
+		t.Error("greeting node should be marked as visited")
+	}
+
+	// Navigate to specials
+	eng.ProcessCommand(state, "say 1")
+	v2, ok := state.Variables["dlg.barkeep.visited.specials"]
+	if !ok || !v2.BoolVal {
+		t.Error("specials node should be marked as visited")
+	}
+}
+
+func TestDialogueTreeInvalidChoice(t *testing.T) {
+	eng := NewEngineFromWorld(dialogueTreeWorld())
+	state := eng.World.NewWorldState("test", "tavern")
+
+	eng.ProcessCommand(state, "talk barkeep")
+	result := eng.ProcessCommand(state, "say 99")
+	if !strings.Contains(result.Text, "Invalid choice") {
+		t.Errorf("Should reject invalid choice number, got: %s", result.Text)
+	}
+}
+
+func TestDialogueTreeAskWithChoices(t *testing.T) {
+	// Test that ask about a topic with a branching node enters the tree
+	world := dialogueTreeWorld()
+	world.Npcs["barkeep"].Dialogue = append(world.Npcs["barkeep"].Dialogue, DialogueLine{
+		NodeID:   "rumors_root",
+		Topic:    "rumors",
+		Response: "I've heard many rumors...",
+		Choices: []DialogueChoice{
+			{Text: "About the treasure?", NextNode: "rumors_treasure"},
+			{Text: "About the king?", NextNode: "__exit__"},
+		},
+	})
+	world.Npcs["barkeep"].Dialogue = append(world.Npcs["barkeep"].Dialogue, DialogueLine{
+		NodeID:   "rumors_treasure",
+		Response: "They say it's guarded by a dragon!",
+	})
+
+	eng := NewEngineFromWorld(world)
+	state := eng.World.NewWorldState("test", "tavern")
+
+	result := eng.ProcessCommand(state, "ask barkeep about rumors")
+	if !strings.Contains(result.Text, "many rumors") {
+		t.Errorf("Expected rumors response, got: %s", result.Text)
+	}
+	if len(result.Choices) != 2 {
+		t.Fatalf("Expected 2 choices, got %d", len(result.Choices))
+	}
+
+	// Follow the tree
+	result = eng.ProcessCommand(state, "say 1")
+	if !strings.Contains(result.Text, "dragon") {
+		t.Errorf("Expected dragon response, got: %s", result.Text)
+	}
+}

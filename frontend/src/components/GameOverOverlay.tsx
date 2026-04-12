@@ -1,9 +1,10 @@
 interface GameOverOverlayProps {
   status: string;
+  endingTitle?: string | null;
   onMainMenu: () => void;
 }
 
-export function GameOverOverlay({ status, onMainMenu }: GameOverOverlayProps) {
+export function GameOverOverlay({ status, endingTitle, onMainMenu }: GameOverOverlayProps) {
   const won = status === "completed";
 
   return (
@@ -13,7 +14,7 @@ export function GameOverOverlay({ status, onMainMenu }: GameOverOverlayProps) {
           <>
             <div className="text-5xl mb-4">&#9734;</div>
             <h2 className="text-amber-400 text-2xl font-bold mb-2">
-              Victory!
+              {endingTitle || "Victory!"}
             </h2>
             <p className="text-gray-400 mb-8">
               You have conquered the temple and claimed your prize.

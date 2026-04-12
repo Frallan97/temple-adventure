@@ -99,11 +99,20 @@ export interface PuzzleDef {
   completion_text: string;
 }
 
+export interface DialogueChoice {
+  text: string;
+  next_node: string;
+  conditions?: Condition[];
+  effects?: Effect[];
+}
+
 export interface DialogueLine {
+  node_id?: string;
   topic: string;
   conditions: Condition[];
   response: string;
   effects: Effect[];
+  choices?: DialogueChoice[];
 }
 
 export interface NpcMovement {

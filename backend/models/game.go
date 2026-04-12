@@ -67,6 +67,14 @@ type CommandResponse struct {
 	GameOver    bool               `json:"game_over"`
 	GameStatus  string             `json:"game_status"`
 	Inventory   []ItemInfoResponse `json:"inventory"`
+	Choices     []ChoiceResponse   `json:"choices,omitempty"`
+	EndingID    string             `json:"ending_id,omitempty"`
+	EndingTitle string             `json:"ending_title,omitempty"`
+}
+
+type ChoiceResponse struct {
+	Index int    `json:"index"`
+	Text  string `json:"text"`
 }
 
 type GameStateResponse struct {

@@ -137,6 +137,11 @@ func (s *GameService) ProcessCommand(ctx context.Context, sessionID uuid.UUID, i
 	roomName := eng.World.Rooms[state.CurrentRoom].Name
 	inventory := eng.GetInventory(state)
 
+	var choices []models.ChoiceResponse
+	for _, c := range result.Choices {
+		choices = append(choices, models.ChoiceResponse{Index: c.Index, Text: c.Text})
+	}
+
 	return &models.CommandResponse{
 		Text:        result.Text,
 		RoomName:    roomName,
@@ -145,6 +150,9 @@ func (s *GameService) ProcessCommand(ctx context.Context, sessionID uuid.UUID, i
 		GameOver:    result.GameOver,
 		GameStatus:  result.GameStatus,
 		Inventory:   toItemInfoResponses(inventory),
+		Choices:     choices,
+		EndingID:    result.EndingID,
+		EndingTitle: result.EndingTitle,
 	}, nil
 }
 

@@ -7,10 +7,10 @@
   "rooms": {
     "tavern": {
       "name": "The Dusty Tavern",
-      "description": "A dimly lit tavern with creaking floorboards. The smell of ale and woodsmoke fills the air. A worn counter stretches along the back wall.",
+      "description": "A dimly lit tavern with creaking floorboards. The smell of ale and woodsmoke fills the air. A worn counter stretches along the back wall. A heavy door to the east leads to the cellar stairs.",
       "connections": {
         "north": "alley",
-        "east": "cellar_entrance"
+        "east": "cellar_stairs"
       },
       "items": ["notice_board", "ale"]
     },
@@ -22,22 +22,28 @@
       },
       "items": ["crate", "old_key"]
     },
-    "cellar_entrance": {
-      "name": "Cellar Entrance",
-      "description": "A heavy wooden door leads down into darkness. The air is cold and damp.",
+    "cellar_stairs": {
+      "name": "Cellar Stairs",
+      "description": "A narrow stone staircase leading down. At the bottom, a heavy oak door blocks the way forward.",
       "connections": {
         "west": "tavern"
       },
-      "items": ["cellar_door", "treasure_chest", "heirloom"]
+      "items": ["cellar_door"]
+    },
+    "cellar": {
+      "name": "The Cellar",
+      "description": "A damp, cold cellar. Cobwebs hang from the low ceiling. In the center of the room sits a small ornate chest, gleaming faintly in the dim light.",
+      "connections": {},
+      "items": ["treasure_chest", "heirloom"]
     }
   },
   "items": {
     "notice_board": {
       "name": "notice board",
-      "description": "A wooden board pinned with faded notices. One reads: 'REWARD - Lost heirloom, last seen in the cellar.'",
+      "description": "A wooden board pinned with faded notices.",
       "aliases": ["board", "notices"],
       "portable": false,
-      "examine_text": "Most notices are about missing cats and odd jobs. But one stands out - someone is offering gold for a family heirloom locked away in the tavern cellar."
+      "examine_text": "Most notices are about missing cats and odd jobs. But one stands out — a golden family heirloom has gone missing, last seen locked away in the tavern cellar. Its rightful owner is desperate to have it returned."
     },
     "ale": {
       "name": "mug of ale",
@@ -67,12 +73,13 @@
     "treasure_chest": {
       "name": "treasure chest",
       "description": "A small wooden chest with ornate carvings. It's locked tight.",
-      "aliases": ["chest", "box"],
-      "portable": false
+      "aliases": ["chest"],
+      "portable": false,
+      "examine_text": "You examine the chest closely. Along the side you notice a small hidden latch. Pressing it should release the lock."
     },
     "heirloom": {
       "name": "golden heirloom",
-      "description": "A beautiful golden locket on a fine chain. This must be the lost heirloom from the notice.",
+      "description": "A beautiful golden locket on a fine chain, resting inside the open chest.",
       "aliases": ["locket", "gold locket"],
       "portable": true
     }
@@ -83,22 +90,22 @@
       "type": "key_lock",
       "name": "Unlock the Cellar",
       "description": "Use the rusty key to open the cellar door.",
-      "room": "cellar_entrance",
+      "room": "cellar_stairs",
       "key_item": "old_key",
       "lock_target": "cellar_door",
       "unlock_direction": "down",
-      "unlock_room": "cellar_entrance",
-      "completion_text": "The lock clicks open with a grinding sound. The cellar door swings inward.",
+      "unlock_room": "cellar",
+      "completion_text": "The rusty key turns with a grinding sound. The cellar door swings open.",
       "lock_fail_text": "The door is locked. You need a key."
     },
     {
       "id": "win_heirloom",
       "type": "win_condition",
       "name": "Recover the Heirloom",
-      "room": "cellar_entrance",
+      "room": "cellar",
       "win_item": "heirloom",
       "win_verb": "take",
-      "win_text": "You pick up the golden locket. The lost heirloom! The barkeep will be thrilled. You've solved the tavern mystery!"
+      "win_text": "You pick up the golden locket from the chest. The lost heirloom! The barkeep will be thrilled. You've solved the tavern mystery!"
     }
   ],
   "npcs": {
@@ -107,37 +114,124 @@
       "description": "A burly man with a thick beard and kind eyes. He polishes a glass absentmindedly while watching the room.",
       "aliases": ["bartender", "innkeeper", "keeper"],
       "room": "tavern",
-      "greeting": "Welcome, stranger! Take a seat. You look like someone who could use a drink... and maybe a job. Check the notice board if you're interested.",
-      "topics": {
-        "heirloom": "My grandmother's locket went missing weeks ago. I think the old caretaker hid it in the cellar before he vanished. But I lost the key somewhere out back.",
-        "key": "I had an old iron key for the cellar, but I dropped it in the alley behind the tavern. Haven't had time to look for it.",
-        "cellar": "The cellar's been locked up for months. Nobody goes down there anymore. If you find the key, you're welcome to take a look.",
-        "caretaker": "Old Morven used to look after the place. Disappeared one night without a word. Shady fellow, if you ask me.",
-        "drink": "Ha! Help yourself to the ale on the counter. On the house."
-      }
+      "dialogue": [
+        {
+          "node_id": "greeting",
+          "text": "The barkeep nods at you. \"Welcome, stranger! You look like someone who could use a drink... and maybe a job. What can I do for you?\"",
+          "choices": [
+            {"text": "I saw the notice about a lost heirloom", "next_node": "heirloom"},
+            {"text": "What's the story with the cellar?", "next_node": "cellar"},
+            {"text": "Just looking around", "next_node": "looking"}
+          ]
+        },
+        {
+          "node_id": "heirloom",
+          "text": "His eyes light up. \"You saw that, did you? My grandmother's locket went missing weeks ago. I think the old caretaker, Morven, hid it in the cellar before he vanished.\"",
+          "choices": [
+            {"text": "How do I get into the cellar?", "next_node": "cellar_key"},
+            {"text": "Who was this caretaker?", "next_node": "caretaker"},
+            {"text": "I'll see what I can find", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "cellar",
+          "text": "\"The cellar's been locked up for months. Nobody goes down there anymore.\" He lowers his voice. \"Strange noises coming from down there lately, though.\"",
+          "choices": [
+            {"text": "Do you have the key?", "next_node": "cellar_key"},
+            {"text": "Strange noises?", "next_node": "noises"},
+            {"text": "Interesting. I'll take a look.", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "cellar_key",
+          "text": "He scratches his beard sheepishly. \"I had an old iron key for the cellar, but I dropped it somewhere in the back alley. Haven't had time to look for it. You're welcome to search for it.\"",
+          "choices": [
+            {"text": "I'll check the alley", "next_node": "__exit__"},
+            {"text": "Anything else I should know?", "next_node": "caretaker"}
+          ]
+        },
+        {
+          "node_id": "caretaker",
+          "text": "\"Old Morven. He was the caretaker here for twenty years. Good worker, kept to himself. Then one night he just... disappeared.\" The barkeep shakes his head. \"Shady fellow, if you ask me. But I don't think he meant any harm.\"",
+          "choices": [
+            {"text": "I'll find the heirloom for you", "next_node": "__exit__"},
+            {"text": "How do I get into the cellar?", "next_node": "cellar_key"}
+          ]
+        },
+        {
+          "node_id": "noises",
+          "text": "He glances around nervously. \"Scraping sounds. Whispers. The regulars say it's haunted.\" He forces a laugh. \"Probably just rats, right?\"",
+          "choices": [
+            {"text": "Probably. Where's the key?", "next_node": "cellar_key"},
+            {"text": "I'm not afraid of ghosts", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "looking",
+          "text": "\"Well, help yourself to the ale on the counter. On the house.\" He nods toward the notice board. \"And check the board if you're looking for work.\""
+        }
+      ]
     },
     "cat": {
       "name": "Tabby Cat",
       "description": "A scruffy orange tabby cat. It watches you with half-closed eyes, tail flicking lazily.",
       "aliases": ["tabby", "kitty", "feline"],
       "room": "alley",
-      "greeting": "The cat meows and rubs against your leg. It seems to want attention... or food.",
-      "topics": {
-        "key": "The cat paws at the ground near the crates and meows insistently. Maybe there's something hidden there.",
-        "food": "The cat's ears perk up at the mention of food. It looks toward the tavern hopefully."
-      }
+      "dialogue": [
+        {
+          "node_id": "greeting",
+          "text": "The cat meows and rubs against your leg. It seems to want attention.",
+          "choices": [
+            {"text": "Pet the cat", "next_node": "pet"},
+            {"text": "Shoo it away", "next_node": "shoo"}
+          ]
+        },
+        {
+          "node_id": "pet",
+          "text": "The cat purrs loudly and rolls onto its back. Then it suddenly jumps up and paws at the ground near the crates, meowing insistently. There seems to be something hidden there."
+        },
+        {
+          "node_id": "shoo",
+          "text": "The cat hisses and darts behind the crates, knocking something loose. You hear a metallic clatter."
+        }
+      ]
     },
     "ghost": {
       "name": "Ghostly Figure",
       "description": "A translucent, shimmering figure in old servant's clothes. It flickers in and out of visibility.",
-      "aliases": ["spirit", "phantom", "morven"],
-      "room": "cellar_entrance",
-      "greeting": "The ghostly figure turns to face you. 'So... someone finally came. I am Morven. I didn't steal the locket - I was trying to protect it. Open the chest and return it to its rightful owner.'",
-      "topics": {
-        "locket": "The ghost sighs. 'The locket holds more than sentimental value. It belonged to the barkeep's grandmother, a woman of great wisdom. Keep it safe.'",
-        "chest": "'The chest holds the heirloom. Use the key and take it back upstairs. My task here is done.'",
-        "morven": "'I was the caretaker here for twenty years. When I discovered someone was trying to steal the locket, I hid it. But the effort... cost me everything.'"
-      }
+      "aliases": ["spirit", "phantom", "morven", "ghost"],
+      "room": "cellar",
+      "dialogue": [
+        {
+          "node_id": "greeting",
+          "text": "The ghostly figure turns to face you. \"So... someone finally came. I am Morven.\"",
+          "choices": [
+            {"text": "Did you steal the heirloom?", "next_node": "steal"},
+            {"text": "What happened to you?", "next_node": "story"},
+            {"text": "Where is the locket?", "next_node": "locket"}
+          ]
+        },
+        {
+          "node_id": "steal",
+          "text": "The ghost shakes its head sadly. \"I didn't steal it — I was trying to protect it. Someone was going to take it from the tavern. I hid it in the chest so it would be safe.\"",
+          "choices": [
+            {"text": "Who was trying to take it?", "next_node": "story"},
+            {"text": "How do I open the chest?", "next_node": "locket"}
+          ]
+        },
+        {
+          "node_id": "story",
+          "text": "\"I was the caretaker here for twenty years. When I discovered a thief planning to steal the locket, I hid it. But the effort... cost me everything.\" The figure flickers. \"I've been trapped here ever since, waiting for someone to return it to its rightful owner.\"",
+          "choices": [
+            {"text": "I'll return it. How do I open the chest?", "next_node": "locket"},
+            {"text": "Rest easy, Morven. I'll take care of it.", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "locket",
+          "text": "\"The chest holds the heirloom. Look at it carefully — there's a hidden latch on the side. Press it and the lock will open.\" The ghost smiles faintly. \"Take the locket back upstairs to the barkeep. My task here will finally be done.\""
+        }
+      ]
     }
   }
 }

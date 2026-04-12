@@ -16,6 +16,8 @@ export function useGame() {
   const [isLoading, setIsLoading] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [gameStatus, setGameStatus] = useState("active");
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [endingTitle, setEndingTitle] = useState<string | null>(null);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const loadingRef = useRef(false);
@@ -39,6 +41,8 @@ export function useGame() {
         setInventory(resp.inventory || []);
         setGameOver(false);
         setGameStatus("active");
+        setEndingId(null);
+        setEndingTitle(null);
         setOutput([
           {
             type: "system",
@@ -98,6 +102,12 @@ export function useGame() {
       try {
         const resp = await gameApi.sendCommand(gameId, trimmed);
         addOutput({ type: "narrative", text: resp.text });
+        if (resp.choices && resp.choices.length > 0) {
+          const choiceText = resp.choices
+            .map((c) => `  ${c.index}. ${c.text}`)
+            .join("\n");
+          addOutput({ type: "system", text: choiceText });
+        }
         setRoomName(resp.room_name);
         setTurnNumber(resp.turn_number);
         setInventory(resp.inventory || []);
@@ -105,6 +115,8 @@ export function useGame() {
           gameOverRef.current = true;
           setGameOver(true);
           setGameStatus(resp.game_status);
+          setEndingId(resp.ending_id || null);
+          setEndingTitle(resp.ending_title || null);
         }
       } catch (err) {
         addOutput({ type: "error", text: `Error: ${err}` });
@@ -152,6 +164,8 @@ export function useGame() {
     gameOverRef.current = false;
     setGameOver(false);
     setGameStatus("active");
+    setEndingId(null);
+    setEndingTitle(null);
     setCommandHistory([]);
     setHistoryIndex(-1);
   }, []);
@@ -166,6 +180,8 @@ export function useGame() {
     isLoading,
     gameOver,
     gameStatus,
+    endingId,
+    endingTitle,
     startGame,
     resumeGame,
     sendCommand,

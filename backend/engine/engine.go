@@ -31,12 +31,19 @@ func NewEngineFromWorld(world *WorldDefinition) *Engine {
 
 func (e *Engine) ProcessCommand(state *WorldState, rawInput string) *CommandResult {
 	if state.Status != "active" {
-		return &CommandResult{
+		result := &CommandResult{
 			Text:       "The game is over.",
 			GameOver:   true,
 			GameStatus: state.Status,
 			TurnNumber: state.TurnNumber,
 		}
+		if v, ok := state.Variables["__ending_id__"]; ok {
+			result.EndingID = v.StrVal
+		}
+		if v, ok := state.Variables["__ending_title__"]; ok {
+			result.EndingTitle = v.StrVal
+		}
+		return result
 	}
 
 	cmd := e.parser.Parse(rawInput)
@@ -91,6 +98,16 @@ func (e *Engine) ProcessCommand(state *WorldState, rawInput string) *CommandResu
 	result.GameOver = state.Status != "active"
 	result.GameStatus = state.Status
 	result.TurnNumber = state.TurnNumber
+
+	// Propagate ending metadata if game is over
+	if result.GameOver {
+		if v, ok := state.Variables["__ending_id__"]; ok {
+			result.EndingID = v.StrVal
+		}
+		if v, ok := state.Variables["__ending_title__"]; ok {
+			result.EndingTitle = v.StrVal
+		}
+	}
 
 	log.Printf("[Turn %d] %s -> %s (room: %s)", state.TurnNumber, rawInput, cmd.Verb, state.CurrentRoom)
 

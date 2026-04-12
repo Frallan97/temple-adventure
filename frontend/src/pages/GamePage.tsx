@@ -63,6 +63,7 @@ export function GamePage() {
       {game.gameOver && (
         <GameOverOverlay
           status={game.gameStatus}
+          endingTitle={game.endingTitle}
           onMainMenu={handleNewGameFromOverlay}
         />
       )}

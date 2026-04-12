@@ -477,3 +477,405 @@ func TestValidateSpecNpcNoRoom(t *testing.T) {
 	errs := ValidateSpec(spec)
 	assertContains(t, errs, "room is required")
 }
+
+// --- ValidateGameplay tests ---
+
+func assertResultContains(t *testing.T, list []string, substr string) {
+	t.Helper()
+	for _, e := range list {
+		if strings.Contains(e, substr) {
+			return
+		}
+	}
+	t.Errorf("expected entry containing %q, got: %v", substr, list)
+}
+
+func TestGameplaySelfReferentialKeyLock(t *testing.T) {
+	spec := minimalSpec()
+	spec.Rooms["room2"] = RoomSpec{Name: "Room 2", Description: "Room 2.", Connections: map[string]string{"south": "room1"}}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Description: "Room 1.", Items: []string{"crown", "key", "door"}, Connections: map[string]string{"north": "room2"}}
+	spec.Items["key"] = ItemSpec{Name: "key", Portable: true}
+	spec.Items["door"] = ItemSpec{Name: "door", Portable: false}
+	spec.Puzzles = append(spec.Puzzles, PuzzleSpec{
+		ID: "selflock", Type: "key_lock", Room: "room1",
+		KeyItem: "key", LockTarget: "door",
+		UnlockDirection: "down", UnlockRoom: "room1", // self-referential!
+	})
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "same as the puzzle room")
+}
+
+func TestGameplayUnreachableRoom(t *testing.T) {
+	spec := minimalSpec()
+	spec.Rooms["island"] = RoomSpec{Name: "Island", Description: "No connections lead here."}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "not reachable")
+}
+
+func TestGameplayAllRoomsReachable(t *testing.T) {
+	spec := minimalSpec()
+	spec.Rooms["room1"] = RoomSpec{
+		Name: "Room 1", Description: "Start.", Items: []string{"crown"},
+		Connections: map[string]string{"north": "room2"},
+	}
+	spec.Rooms["room2"] = RoomSpec{
+		Name: "Room 2", Description: "End.",
+		Connections: map[string]string{"south": "room1"},
+	}
+	vr := ValidateGameplay(spec)
+	for _, e := range vr.Errors {
+		if strings.Contains(e, "not reachable") {
+			t.Errorf("unexpected reachability error: %s", e)
+		}
+	}
+}
+
+func TestGameplayReachableViaKeyLock(t *testing.T) {
+	// room1 has key, room1 has locked door to room2
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "R1", Description: "Start.", Items: []string{"crown", "key", "door"}, Connections: map[string]string{}},
+			"room2": {Name: "R2", Description: "Locked room.", Items: []string{}, Connections: map[string]string{}},
+		},
+		Items: map[string]ItemSpec{
+			"crown": {Name: "crown", Portable: true},
+			"key":   {Name: "key", Portable: true},
+			"door":  {Name: "door", Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown", WinText: "You win!"},
+			{ID: "lock1", Type: "key_lock", Room: "room1", KeyItem: "key", LockTarget: "door", UnlockDirection: "north", UnlockRoom: "room2"},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	for _, e := range vr.Errors {
+		if strings.Contains(e, "not reachable") {
+			t.Errorf("room2 should be reachable via key_lock unlock, got: %s", e)
+		}
+	}
+}
+
+func TestGameplayKeyBehindLock(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "R1", Description: "Start.", Items: []string{"crown", "door"}, Connections: map[string]string{}},
+			"room2": {Name: "R2", Description: "Locked.", Items: []string{"key"}, Connections: map[string]string{}},
+		},
+		Items: map[string]ItemSpec{
+			"crown": {Name: "crown", Portable: true},
+			"key":   {Name: "key", Portable: true},
+			"door":  {Name: "door", Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown", WinText: "You win!"},
+			{ID: "lock1", Type: "key_lock", Room: "room1", KeyItem: "key", LockTarget: "door", UnlockDirection: "north", UnlockRoom: "room2"},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "key is unreachable")
+}
+
+func TestGameplayWinItemInStartRoom(t *testing.T) {
+	spec := minimalSpec()
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "win item")
+	assertResultContains(t, vr.Warnings, "start room")
+}
+
+func TestGameplayCircularPuzzleDeps(t *testing.T) {
+	// lock A's key is in room B (locked by B), lock B's key is in room A (locked by A)
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "lobby",
+		Rooms: map[string]RoomSpec{
+			"lobby":  {Name: "Lobby", Description: "Start.", Items: []string{"crown", "door_a", "door_b"}, Connections: map[string]string{}},
+			"room_a": {Name: "Room A", Description: "A.", Items: []string{"key_b"}, Connections: map[string]string{}},
+			"room_b": {Name: "Room B", Description: "B.", Items: []string{"key_a"}, Connections: map[string]string{}},
+		},
+		Items: map[string]ItemSpec{
+			"crown":  {Name: "crown", Portable: true},
+			"key_a":  {Name: "key a", Portable: true},
+			"key_b":  {Name: "key b", Portable: true},
+			"door_a": {Name: "door a", Portable: false},
+			"door_b": {Name: "door b", Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Room: "lobby", WinItem: "crown", WinText: "You win!"},
+			{ID: "lock_a", Type: "key_lock", Room: "lobby", KeyItem: "key_a", LockTarget: "door_a", UnlockDirection: "north", UnlockRoom: "room_a"},
+			{ID: "lock_b", Type: "key_lock", Room: "lobby", KeyItem: "key_b", LockTarget: "door_b", UnlockDirection: "east", UnlockRoom: "room_b"},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "circular puzzle dependency")
+}
+
+func TestGameplayDeadEnd(t *testing.T) {
+	spec := minimalSpec()
+	spec.Rooms["room1"] = RoomSpec{
+		Name: "Room 1", Description: "Start.", Items: []string{"crown"},
+		Connections: map[string]string{"north": "dead"},
+	}
+	spec.Rooms["dead"] = RoomSpec{Name: "Dead End", Description: "No way out."}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "no connections")
+}
+
+func TestGameplayMissingReverseConnection(t *testing.T) {
+	spec := minimalSpec()
+	spec.Rooms["room1"] = RoomSpec{
+		Name: "Room 1", Description: "Start.", Items: []string{"crown"},
+		Connections: map[string]string{"north": "room2"},
+	}
+	spec.Rooms["room2"] = RoomSpec{
+		Name: "Room 2", Description: "One way.",
+		Connections: map[string]string{}, // no south back to room1
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "no connection back")
+}
+
+func TestGameplayOrphanDialogueNode(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"bob": {
+			Name: "Bob", Room: "room1",
+			Dialogue: []DialogueNodeSpec{
+				{NodeID: "greeting", Text: "Hello!", Choices: []DialogueChoiceSpec{
+					{Text: "Bye", NextNode: "__exit__"},
+				}},
+				{NodeID: "orphan", Text: "Nobody can reach me."},
+			},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "orphan")
+}
+
+func TestGameplaySimpleTopicWarning(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"bob": {
+			Name: "Bob", Room: "room1",
+			Greeting: "Hello!",
+			Topics:   map[string]string{"treasure": "It's hidden."},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "simple topics")
+}
+
+// --- Ending validation tests ---
+
+func TestValidateSpecEndingsValid(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			Endings: []EndingSpec{
+				{ID: "good", Title: "Good End", Conditions: map[string]string{"helped": "true"}, Text: "You helped!"},
+				{ID: "neutral", Title: "Neutral End", Text: "You survived."},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	if len(errs) > 0 {
+		t.Fatalf("expected no errors, got: %v", errs)
+	}
+}
+
+func TestValidateSpecEndingsMissingID(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			Endings: []EndingSpec{
+				{Title: "Bad", Text: "Oops."},
+				{ID: "fallback", Title: "Ok", Text: "Fine."},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "missing 'id'")
+}
+
+func TestValidateSpecEndingsMissingText(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			Endings: []EndingSpec{
+				{ID: "empty", Title: "Empty"},
+				{ID: "fallback", Title: "Ok", Text: "Fine."},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "missing 'text'")
+}
+
+func TestValidateSpecEndingsNoFallback(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			Endings: []EndingSpec{
+				{ID: "good", Title: "Good", Conditions: map[string]string{"x": "true"}, Text: "Good!"},
+				{ID: "bad", Title: "Bad", Conditions: map[string]string{"y": "true"}, Text: "Bad!"},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "no fallback ending")
+}
+
+func TestValidateSpecEndingsMutuallyExclusive(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			EndingID: "oops",
+			Endings: []EndingSpec{
+				{ID: "good", Title: "Good", Text: "Good!"},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "mutually exclusive")
+}
+
+func TestValidateSpecEndingsWinTextIgnored(t *testing.T) {
+	spec := minimalSpec()
+	spec.Puzzles = []PuzzleSpec{
+		{
+			ID: "win", Type: "win_condition", Room: "room1", WinItem: "crown",
+			WinText: "should not be here",
+			Endings: []EndingSpec{
+				{ID: "good", Title: "Good", Text: "Good!"},
+			},
+		},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "win_text")
+}
+
+func TestValidateSpecDuplicateEndingIDs(t *testing.T) {
+	spec := minimalSpec()
+	spec.Items["sword"] = ItemSpec{Name: "sword", Portable: true}
+	spec.Rooms["room2"] = RoomSpec{Name: "Room 2", Description: "R2.", Items: []string{"sword"}, Connections: map[string]string{"south": "room1"}}
+	spec.Rooms["room1"] = RoomSpec{Name: "Room 1", Description: "R1.", Items: []string{"crown"}, Connections: map[string]string{"north": "room2"}}
+	spec.Puzzles = []PuzzleSpec{
+		{ID: "win1", Type: "win_condition", Room: "room1", WinItem: "crown", WinText: "Win1!", EndingID: "same_id"},
+		{ID: "win2", Type: "win_condition", Room: "room2", WinItem: "sword", WinText: "Win2!", EndingID: "same_id"},
+	}
+	errs := ValidateSpec(spec)
+	assertContains(t, errs, "already used")
+}
+
+func TestGameplayEndingUnreachableWinItem(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "R1", Description: "Start.", Items: []string{"gem"}, Connections: map[string]string{}},
+			"island": {Name: "Island", Description: "Unreachable.", Items: []string{"sword"}, Connections: map[string]string{}},
+		},
+		Items: map[string]ItemSpec{
+			"gem":   {Name: "gem", Portable: true},
+			"sword": {Name: "sword", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win1", Type: "win_condition", Room: "room1", WinItem: "gem", WinText: "Got gem!"},
+			{ID: "win2", Type: "win_condition", Room: "island", WinItem: "sword", WinText: "Got sword!"},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "win item \"sword\" is in unreachable room")
+}
+
+func TestGameplayEndingConditionUnknownVar(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "R1", Description: "Start.", Items: []string{"gem"}},
+		},
+		Items: map[string]ItemSpec{
+			"gem": {Name: "gem", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "win", Type: "win_condition", Room: "room1", WinItem: "gem",
+				Endings: []EndingSpec{
+					{ID: "good", Title: "Good", Conditions: map[string]string{"mystery_var": "true"}, Text: "Good!"},
+					{ID: "default", Title: "Default", Text: "Ok."},
+				},
+			},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Warnings, "mystery_var")
+	assertResultContains(t, vr.Warnings, "not set by any")
+}
+
+func TestGameplayEndingConditionSetByDialogue(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "R1", Description: "Start.", Items: []string{"gem"}},
+		},
+		Items: map[string]ItemSpec{
+			"gem": {Name: "gem", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "win", Type: "win_condition", Room: "room1", WinItem: "gem",
+				Endings: []EndingSpec{
+					{ID: "good", Title: "Good", Conditions: map[string]string{"helped_npc": "true"}, Text: "Good!"},
+					{ID: "default", Title: "Default", Text: "Ok."},
+				},
+			},
+		},
+		Npcs: map[string]NpcSpec{
+			"bob": {
+				Name: "Bob", Room: "room1",
+				Dialogue: []DialogueNodeSpec{
+					{NodeID: "greeting", Text: "Hi!", Choices: []DialogueChoiceSpec{
+						{Text: "Help me", NextNode: "__exit__", SetVar: "helped_npc=true"},
+					}},
+				},
+			},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	// Should NOT warn about helped_npc since it's set by dialogue
+	for _, w := range vr.Warnings {
+		if strings.Contains(w, "helped_npc") {
+			t.Errorf("should not warn about helped_npc, got: %s", w)
+		}
+	}
+}
+
+func TestGameplayNoWarningsOnCleanSpec(t *testing.T) {
+	// A well-formed 2-room spec with proper connections
+	spec := &StorySpec{
+		Title: "Clean", Slug: "clean", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "Room 1", Description: "Start.", Items: []string{"key", "door"}, Connections: map[string]string{"north": "room2"}},
+			"room2": {Name: "Room 2", Description: "End.", Items: []string{"crown"}, Connections: map[string]string{"south": "room1"}},
+		},
+		Items: map[string]ItemSpec{
+			"crown": {Name: "crown", Portable: true},
+			"key":   {Name: "key", Portable: true},
+			"door":  {Name: "door", Portable: false},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Room: "room2", WinItem: "crown", WinText: "You win!"},
+		},
+	}
+	vr := ValidateGameplay(spec)
+	if len(vr.Errors) > 0 {
+		t.Errorf("expected no errors, got: %v", vr.Errors)
+	}
+	if len(vr.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", vr.Warnings)
+	}
+}

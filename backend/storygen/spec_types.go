@@ -75,9 +75,12 @@ type PuzzleSpec struct {
 	FailureEffects []FailureEffectSpec `json:"failure_effects,omitempty"`
 
 	// win_condition: taking/using WinItem ends the game
-	WinItem string `json:"win_item,omitempty"`
-	WinVerb string `json:"win_verb,omitempty"`
-	WinText string `json:"win_text,omitempty"`
+	WinItem     string       `json:"win_item,omitempty"`
+	WinVerb     string       `json:"win_verb,omitempty"`
+	WinText     string       `json:"win_text,omitempty"`      // simple single ending text
+	Endings     []EndingSpec `json:"endings,omitempty"`        // conditional multiple endings (overrides WinText)
+	EndingID    string       `json:"ending_id,omitempty"`      // identifier for this ending (when using multiple win_conditions)
+	EndingTitle string       `json:"ending_title,omitempty"`   // display title for this ending
 
 	// combination_lock: interact with CombinationTarget N times to solve
 	CombinationTarget string   `json:"combination_target,omitempty"`
@@ -104,6 +107,14 @@ type PuzzleSpec struct {
 	CounterConsumeItems bool              `json:"counter_consume_items,omitempty"`
 }
 
+// EndingSpec defines a conditional ending for a win_condition puzzle.
+type EndingSpec struct {
+	ID         string            `json:"id"`
+	Title      string            `json:"title"`
+	Conditions map[string]string `json:"conditions,omitempty"` // variable conditions: key → expected value
+	Text       string            `json:"text"`
+}
+
 // FailureEffectSpec is a simplified failure effect for timed challenges.
 type FailureEffectSpec struct {
 	Type      string `json:"type"`                // "move_player" or "lock_connection"
@@ -113,12 +124,30 @@ type FailureEffectSpec struct {
 
 // NpcSpec defines an NPC in simplified form.
 type NpcSpec struct {
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Aliases     []string          `json:"aliases"`
-	Room        string            `json:"room"`
-	Greeting    string            `json:"greeting,omitempty"`
-	Topics      map[string]string `json:"topics,omitempty"`
+	Name        string              `json:"name"`
+	Description string              `json:"description"`
+	Aliases     []string            `json:"aliases"`
+	Room        string              `json:"room"`
+	Greeting    string              `json:"greeting,omitempty"`
+	Topics      map[string]string   `json:"topics,omitempty"`
+	Dialogue    []DialogueNodeSpec  `json:"dialogue,omitempty"` // full dialogue tree (overrides Greeting if present)
+}
+
+// DialogueNodeSpec defines a node in a dialogue tree.
+type DialogueNodeSpec struct {
+	NodeID  string               `json:"node_id"`
+	Text    string               `json:"text"`
+	Topic   string               `json:"topic,omitempty"`
+	Choices []DialogueChoiceSpec `json:"choices,omitempty"`
+}
+
+// DialogueChoiceSpec defines a player choice in a dialogue node.
+type DialogueChoiceSpec struct {
+	Text     string `json:"text"`
+	NextNode string `json:"next_node"`
+	SetVar   string `json:"set_var,omitempty"`   // shorthand: "key=value" → set_var effect
+	GiveItem string `json:"give_item,omitempty"` // shorthand: add_item effect
+	NeedItem string `json:"need_item,omitempty"` // shorthand: has_item condition
 }
 
 // Reverse direction mapping for bidirectional connections.

@@ -138,6 +138,12 @@ func ApplyEffect(state *WorldState, effect Effect) {
 	case "set_status":
 		state.Status = fmt.Sprintf("%v", effect.Value)
 
+	case "set_ending_id":
+		state.Variables["__ending_id__"] = Variable{Type: "string", StrVal: fmt.Sprintf("%v", effect.Value)}
+
+	case "set_ending_title":
+		state.Variables["__ending_title__"] = Variable{Type: "string", StrVal: fmt.Sprintf("%v", effect.Value)}
+
 	case "move_npc":
 		if ns, ok := state.NpcStates[effect.Key]; ok {
 			ns.CurrentRoom = fmt.Sprintf("%v", effect.Value)

@@ -2,6 +2,7 @@ package storygen
 
 import (
 	"fmt"
+	"strings"
 
 	"temple-adventure/engine"
 )
@@ -102,18 +103,57 @@ func (e *expander) buildNpcs() {
 			Aliases:     append([]string{}, ns.Aliases...),
 			Room:        ns.Room,
 		}
-		if ns.Greeting != "" {
-			npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
-				Topic:    "",
-				Response: ns.Greeting,
-			})
+
+		if len(ns.Dialogue) > 0 {
+			// Full dialogue tree mode
+			for _, dn := range ns.Dialogue {
+				dl := engine.DialogueLine{
+					NodeID:   dn.NodeID,
+					Topic:    dn.Topic,
+					Response: dn.Text,
+				}
+				for _, cs := range dn.Choices {
+					choice := engine.DialogueChoice{
+						Text:     cs.Text,
+						NextNode: cs.NextNode,
+					}
+					if cs.NeedItem != "" {
+						choice.Conditions = append(choice.Conditions, engine.Condition{
+							Type: "has_item", Key: cs.NeedItem,
+						})
+					}
+					if cs.GiveItem != "" {
+						choice.Effects = append(choice.Effects, engine.Effect{
+							Type: "add_item", Key: cs.GiveItem,
+						})
+					}
+					if cs.SetVar != "" {
+						if parts := strings.SplitN(cs.SetVar, "=", 2); len(parts) == 2 {
+							choice.Effects = append(choice.Effects, engine.Effect{
+								Type: "set_var", Key: parts[0], Value: parts[1],
+							})
+						}
+					}
+					dl.Choices = append(dl.Choices, choice)
+				}
+				npc.Dialogue = append(npc.Dialogue, dl)
+			}
+		} else {
+			// Simple greeting/topics mode (backward compatible)
+			if ns.Greeting != "" {
+				npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
+					Topic:    "",
+					Response: ns.Greeting,
+				})
+			}
+			for topic, response := range ns.Topics {
+				npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
+					Topic:    topic,
+					Response: response,
+				})
+			}
 		}
-		for topic, response := range ns.Topics {
-			npc.Dialogue = append(npc.Dialogue, engine.DialogueLine{
-				Topic:    topic,
-				Response: response,
-			})
-		}
+
 		e.world.Npcs[id] = npc
 	}
 }
@@ -475,16 +515,68 @@ func (e *expander) expandWinCondition(ps *PuzzleSpec) error {
 		return fmt.Errorf("win_item %q not found", ps.WinItem)
 	}
 
-	item.Interactions = append(item.Interactions, engine.Interaction{
-		Verb: winVerb,
-		Effects: []engine.Effect{
+	if len(ps.Endings) > 0 {
+		// Conditional endings: create one interaction per ending.
+		// Specific endings (with conditions) first, fallback (no conditions) last.
+		for _, ending := range ps.Endings {
+			var conditions []engine.Condition
+			for k, v := range ending.Conditions {
+				conditions = append(conditions, engine.Condition{
+					Type: "var_equals", Key: k, Value: parseConditionValue(v),
+				})
+			}
+
+			effects := []engine.Effect{
+				{Type: "set_var", Key: "game_won", Value: true},
+				{Type: "set_status", Value: "completed"},
+			}
+			if ending.ID != "" {
+				effects = append(effects, engine.Effect{Type: "set_ending_id", Value: ending.ID})
+			}
+			if ending.Title != "" {
+				effects = append(effects, engine.Effect{Type: "set_ending_title", Value: ending.Title})
+			}
+
+			item.Interactions = append(item.Interactions, engine.Interaction{
+				Verb:       winVerb,
+				Conditions: conditions,
+				Effects:    effects,
+				Response:   ending.Text,
+			})
+		}
+	} else {
+		// Single ending (backward compatible)
+		effects := []engine.Effect{
 			{Type: "set_var", Key: "game_won", Value: true},
 			{Type: "set_status", Value: "completed"},
-		},
-		Response: ps.WinText,
-	})
+		}
+		if ps.EndingID != "" {
+			effects = append(effects, engine.Effect{Type: "set_ending_id", Value: ps.EndingID})
+		}
+		if ps.EndingTitle != "" {
+			effects = append(effects, engine.Effect{Type: "set_ending_title", Value: ps.EndingTitle})
+		}
+
+		item.Interactions = append(item.Interactions, engine.Interaction{
+			Verb:    winVerb,
+			Effects: effects,
+			Response: ps.WinText,
+		})
+	}
 
 	return nil
+}
+
+// parseConditionValue converts string values from EndingSpec.Conditions
+// to typed values the engine can match (bool, int, or string).
+func parseConditionValue(s string) interface{} {
+	if s == "true" {
+		return true
+	}
+	if s == "false" {
+		return false
+	}
+	return s
 }
 
 func (e *expander) expandCombinationLock(ps *PuzzleSpec) error {

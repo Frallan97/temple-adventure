@@ -255,6 +255,54 @@ func TestUnknownCommand(t *testing.T) {
 	}
 }
 
+func TestEndingMetadataPropagation(t *testing.T) {
+	world := &WorldDefinition{
+		Rooms: map[string]*RoomDef{
+			"room1": {ID: "room1", Name: "Room 1", Description: "Start.", Connections: map[string]string{}, Items: []string{"gem"}},
+		},
+		Items: map[string]*ItemDef{
+			"gem": {
+				ID: "gem", Name: "gem", Portable: true,
+				Interactions: []Interaction{
+					{
+						Verb: "take",
+						Effects: []Effect{
+							{Type: "set_var", Key: "game_won", Value: true},
+							{Type: "set_status", Value: "completed"},
+							{Type: "set_ending_id", Value: "good"},
+							{Type: "set_ending_title", Value: "The Good Ending"},
+						},
+						Response: "You got the gem!",
+					},
+				},
+			},
+		},
+		Puzzles: map[string]*PuzzleDef{},
+		Npcs:    map[string]*NpcDef{},
+	}
+
+	eng := NewEngineFromWorld(world)
+	state := world.NewWorldState("test", "room1")
+
+	result := eng.ProcessCommand(state, "take gem")
+
+	if !result.GameOver {
+		t.Fatal("game should be over")
+	}
+	if result.EndingID != "good" {
+		t.Errorf("expected ending_id 'good', got %q", result.EndingID)
+	}
+	if result.EndingTitle != "The Good Ending" {
+		t.Errorf("expected ending_title 'The Good Ending', got %q", result.EndingTitle)
+	}
+
+	// Subsequent commands should also return ending metadata
+	result2 := eng.ProcessCommand(state, "look")
+	if result2.EndingID != "good" {
+		t.Errorf("game-over response should still have ending_id, got %q", result2.EndingID)
+	}
+}
+
 func TestDropItem(t *testing.T) {
 	engine, state := setupTestEngine(t)
 

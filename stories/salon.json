@@ -1,0 +1,200 @@
+{
+  "title": "The Salon",
+  "slug": "the-salon",
+  "description": "Mingle with high society at the Salon. Someone here knows about a secret gold mine in the mountains. Can you charm the truth out of them?",
+  "author": "Claude",
+  "start_room": "salon",
+  "rooms": {
+    "salon": {
+      "name": "The Grand Salon",
+      "description": "A lavish parlor with velvet curtains and crystal chandeliers. Well-dressed guests sip champagne and whisper behind gloved hands. A marble fireplace crackles warmly.",
+      "connections": {
+        "north": "terrace"
+      },
+      "items": ["champagne", "painting"]
+    },
+    "terrace": {
+      "name": "The Terrace",
+      "description": "A stone terrace overlooking the valley. The snow-capped mountains loom in the distance, their peaks catching the last golden light of the evening.",
+      "connections": {
+        "south": "salon"
+      },
+      "items": ["telescope"]
+    }
+  },
+  "items": {
+    "champagne": {
+      "name": "glass of champagne",
+      "description": "A crystal flute filled with golden bubbles.",
+      "aliases": ["glass", "flute", "drink"],
+      "portable": true,
+      "examine_text": "The finest vintage. Just the thing to loosen someone's tongue."
+    },
+    "painting": {
+      "name": "mountain painting",
+      "description": "A large oil painting depicting a rugged mountain range with a narrow trail leading into a hidden valley.",
+      "aliases": ["oil painting", "picture"],
+      "portable": false,
+      "examine_text": "The painting shows a trail winding through the mountains. A small 'X' is painted near one of the peaks. Curious."
+    },
+    "telescope": {
+      "name": "brass telescope",
+      "description": "An ornate telescope on a tripod, aimed at the distant mountains.",
+      "aliases": ["spyglass"],
+      "portable": false,
+      "examine_text": "Through the lens you can see the mountain trail from the painting. There's definitely something up there — a faint glint of gold near the peak."
+    },
+    "treasure_map": {
+      "name": "treasure map",
+      "description": "A hand-drawn map showing the exact route to the secret gold mine in the mountains.",
+      "aliases": ["map"],
+      "portable": true,
+      "examine_text": "Henri's map shows a narrow trail through the eastern pass, leading to a hidden cave. 'The Mother Lode' is scrawled at the top in shaky handwriting."
+    }
+  },
+  "puzzles": [
+    {
+      "id": "win_gold_mine",
+      "type": "win_condition",
+      "name": "Discover the Gold Mine",
+      "room": "terrace",
+      "win_item": "treasure_map",
+      "win_verb": "take",
+      "win_text": "You unfold Henri's map and trace the route with your finger. The secret gold mine in the mountains — it's real, and now you know exactly where it is. The evening at the Salon was worth every moment."
+    }
+  ],
+  "npcs": {
+    "colette": {
+      "name": "Madame Colette",
+      "description": "An elegant woman in a silk dress, her eyes sharp and knowing. She fans herself lazily while observing everyone in the room.",
+      "aliases": ["madame", "lady", "woman"],
+      "room": "salon",
+      "dialogue": [
+        {
+          "node_id": "greeting",
+          "text": "Madame Colette smiles coyly. \"Ah, a new face! Welcome to my little gathering. Tell me, what brings you to the Salon tonight?\"",
+          "choices": [
+            {"text": "I'm looking for interesting company", "next_node": "company"},
+            {"text": "I've heard rumors about gold in the mountains", "next_node": "gold_direct"},
+            {"text": "Just enjoying the evening", "next_node": "evening"}
+          ]
+        },
+        {
+          "node_id": "company",
+          "text": "\"Interesting company?\" She leans in conspiratorially. \"Well, you've come to the right place. Everyone here has a secret or two. Take old Henri out on the terrace — he used to be a prospector, you know. Spent thirty years in those mountains.\"",
+          "choices": [
+            {"text": "A prospector? What did he find?", "next_node": "henri_info"},
+            {"text": "Thank you for the tip", "next_node": "__exit__", "set_var": "colette_told_about_henri=true"}
+          ]
+        },
+        {
+          "node_id": "gold_direct",
+          "text": "Her eyes narrow slightly. \"Gold? My dear, one doesn't simply blurt out such things in polite company.\" She glances toward the terrace. \"But if you're truly curious... old Henri might know a thing or two. He's the one nursing his brandy out on the terrace. Be gentle with him — he's had a hard life.\"",
+          "choices": [
+            {"text": "I'll be discreet, I promise", "next_node": "__exit__", "set_var": "colette_told_about_henri=true"},
+            {"text": "What can you tell me about Henri?", "next_node": "henri_info"}
+          ]
+        },
+        {
+          "node_id": "evening",
+          "text": "\"How delightfully boring of you.\" She waves her fan dismissively. \"Well, do mingle. The champagne is excellent and the company is... revealing, if you know how to listen.\""
+        },
+        {
+          "node_id": "henri_info",
+          "text": "She lowers her voice. \"Henri discovered something up in those mountains years ago. He won't talk about it to just anyone, though. The man's been burned before — had a partner who betrayed him.\" She pauses. \"If you want him to open up, you'll need to earn his trust. Perhaps bring him a drink. And whatever you do, don't mention his old partner, Jacques.\"",
+          "choices": [
+            {"text": "Thank you, Colette. Very helpful.", "next_node": "__exit__", "set_var": "colette_told_about_henri=true"}
+          ]
+        }
+      ]
+    },
+    "henri": {
+      "name": "Old Henri",
+      "description": "A weathered old man with sun-darkened skin and calloused hands. He stares out at the mountains with a faraway look, swirling a nearly empty glass of brandy.",
+      "aliases": ["old man", "prospector", "henri"],
+      "room": "terrace",
+      "dialogue": [
+        {
+          "node_id": "greeting_cold",
+          "text": "Henri barely glances at you. \"I'm not much for conversation, friend. Just enjoying the view.\"",
+          "choices": [
+            {"text": "Can I get you a drink?", "next_node": "offer_drink"},
+            {"text": "Tell me about the gold mine", "next_node": "too_direct"},
+            {"text": "Those mountains are beautiful", "next_node": "mountains_chat"}
+          ]
+        },
+        {
+          "node_id": "too_direct",
+          "text": "Henri's face hardens. \"Gold mine? I don't know what you're talking about. Leave me be.\" He turns his back to you."
+        },
+        {
+          "node_id": "mountains_chat",
+          "text": "His expression softens slightly. \"Aye, they are. Spent the best years of my life up there.\" He trails off, lost in memory. \"But that was a long time ago.\""
+        },
+        {
+          "node_id": "offer_drink",
+          "text": "Henri looks at his empty glass, then at you. \"Well now, that's kind of you. I won't say no to that.\"",
+          "choices": [
+            {"text": "[Give him the champagne]", "next_node": "give_champagne", "need_item": "champagne"},
+            {"text": "I'll go find one", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "give_champagne",
+          "text": "Henri takes the glass gratefully and drinks deeply. \"Ah, that's the stuff. You're alright, friend.\" He looks at you with warmer eyes. \"Now then, what did you really want to ask me?\"",
+          "choices": [
+            {"text": "Colette says you used to prospect in the mountains", "next_node": "prospect_talk", "need_item": "champagne"},
+            {"text": "I saw the mountain painting inside. There's an X on it.", "next_node": "painting_talk"},
+            {"text": "Just making conversation", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "prospect_talk",
+          "text": "He chuckles. \"Colette talks too much. But yes, I spent thirty years up in those peaks. Found a lot of nothing, mostly.\" He pauses, studying you carefully. \"Mostly.\"",
+          "choices": [
+            {"text": "Mostly? What did you find?", "next_node": "what_found"},
+            {"text": "Must have been a hard life", "next_node": "hard_life"}
+          ]
+        },
+        {
+          "node_id": "painting_talk",
+          "text": "Henri's eyes widen. \"You noticed that, did you? Sharp eyes.\" He leans forward. \"I painted that picture myself, twenty years ago. From memory.\"",
+          "choices": [
+            {"text": "What's at the X?", "next_node": "what_found"},
+            {"text": "You're quite the artist", "next_node": "__exit__"}
+          ]
+        },
+        {
+          "node_id": "hard_life",
+          "text": "\"Hard, yes. But rewarding. The mountains teach you patience.\" He gazes out at the peaks. \"And sometimes... sometimes they reward you beyond your wildest dreams.\"",
+          "choices": [
+            {"text": "What did the mountains reward you with?", "next_node": "what_found"}
+          ]
+        },
+        {
+          "node_id": "what_found",
+          "text": "Henri glances around to make sure no one is listening. \"Gold,\" he whispers. \"A vein of gold as thick as my arm, running through the heart of the eastern peak. A mine that could make a person rich beyond imagining.\"",
+          "choices": [
+            {"text": "Why haven't you gone back?", "next_node": "why_not_back"},
+            {"text": "Can you show me where it is?", "next_node": "show_me"}
+          ]
+        },
+        {
+          "node_id": "why_not_back",
+          "text": "His face darkens. \"I had a partner once. Jacques. I showed him the mine, and he tried to claim it all for himself. Filed the papers in his name alone.\" He shakes his head. \"I've been fighting it in the courts ever since. Lost everything. But the claim expired last month. The mine is free again.\"",
+          "choices": [
+            {"text": "Then it's yours for the taking", "next_node": "show_me"},
+            {"text": "I'm sorry that happened to you", "next_node": "show_me"}
+          ]
+        },
+        {
+          "node_id": "show_me",
+          "text": "Henri studies your face for a long moment, then nods slowly. \"You've been kind to me tonight. Kinder than most.\" He reaches into his coat and pulls out a worn, folded piece of paper. \"This is the map to the mine. The route through the eastern pass. Take it — I'm too old to make the climb again. But promise me you'll use it well.\"\n\nHe places the treasure map in your hands.",
+          "choices": [
+            {"text": "I promise. Thank you, Henri.", "next_node": "__exit__", "give_item": "treasure_map"}
+          ]
+        }
+      ]
+    }
+  }
+}

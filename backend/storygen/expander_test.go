@@ -956,6 +956,158 @@ func TestExpandNpcs(t *testing.T) {
 	}
 }
 
+// --- Multiple endings tests ---
+
+func TestExpandWinConditionWithEndings(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "Room 1", Description: "Start.", Items: []string{"gem"}},
+		},
+		Items: map[string]ItemSpec{
+			"gem": {Name: "gem", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "win", Type: "win_condition", Room: "room1", WinItem: "gem",
+				Endings: []EndingSpec{
+					{ID: "good", Title: "The Good Ending", Conditions: map[string]string{"helped_npc": "true"}, Text: "You helped everyone!"},
+					{ID: "neutral", Title: "The Neutral Ending", Text: "You got the gem."},
+				},
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	gem := world.Items["gem"]
+	if gem == nil {
+		t.Fatal("gem not found")
+	}
+
+	// Should have 2 interactions: good ending (with condition) and neutral (fallback)
+	if len(gem.Interactions) < 2 {
+		t.Fatalf("expected at least 2 interactions on gem, got %d", len(gem.Interactions))
+	}
+
+	// First interaction should have conditions (the good ending)
+	goodInteraction := gem.Interactions[0]
+	if len(goodInteraction.Conditions) == 0 {
+		t.Error("good ending interaction should have conditions")
+	}
+	// Check it has set_ending_id effect
+	hasEndingID := false
+	for _, eff := range goodInteraction.Effects {
+		if eff.Type == "set_ending_id" && eff.Value == "good" {
+			hasEndingID = true
+		}
+	}
+	if !hasEndingID {
+		t.Error("good ending should have set_ending_id effect with value 'good'")
+	}
+
+	// Second interaction should be the fallback (no conditions)
+	neutralInteraction := gem.Interactions[1]
+	if len(neutralInteraction.Conditions) != 0 {
+		t.Error("neutral ending (fallback) should have no conditions")
+	}
+	hasNeutralTitle := false
+	for _, eff := range neutralInteraction.Effects {
+		if eff.Type == "set_ending_title" && eff.Value == "The Neutral Ending" {
+			hasNeutralTitle = true
+		}
+	}
+	if !hasNeutralTitle {
+		t.Error("neutral ending should have set_ending_title effect")
+	}
+}
+
+func TestExpandWinConditionWithEndingID(t *testing.T) {
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "Room 1", Description: "Start.", Items: []string{"gem"}},
+		},
+		Items: map[string]ItemSpec{
+			"gem": {Name: "gem", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{
+				ID: "win", Type: "win_condition", Room: "room1", WinItem: "gem",
+				WinText: "You got the gem!", EndingID: "gem_ending", EndingTitle: "The Gem Collector",
+			},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	gem := world.Items["gem"]
+	if len(gem.Interactions) != 1 {
+		t.Fatalf("expected 1 interaction, got %d", len(gem.Interactions))
+	}
+
+	inter := gem.Interactions[0]
+	hasEndingID := false
+	hasEndingTitle := false
+	for _, eff := range inter.Effects {
+		if eff.Type == "set_ending_id" && eff.Value == "gem_ending" {
+			hasEndingID = true
+		}
+		if eff.Type == "set_ending_title" && eff.Value == "The Gem Collector" {
+			hasEndingTitle = true
+		}
+	}
+	if !hasEndingID {
+		t.Error("expected set_ending_id effect")
+	}
+	if !hasEndingTitle {
+		t.Error("expected set_ending_title effect")
+	}
+}
+
+func TestExpandWinConditionBackwardCompat(t *testing.T) {
+	// Existing WinText-only format should still work
+	spec := &StorySpec{
+		Title: "Test", Slug: "test", StartRoom: "room1",
+		Rooms: map[string]RoomSpec{
+			"room1": {Name: "Room 1", Description: "Start.", Items: []string{"gem"}},
+		},
+		Items: map[string]ItemSpec{
+			"gem": {Name: "gem", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "win", Type: "win_condition", Room: "room1", WinItem: "gem", WinText: "You win!"},
+		},
+	}
+
+	world, err := Expand(spec)
+	if err != nil {
+		t.Fatalf("Expand failed: %v", err)
+	}
+
+	gem := world.Items["gem"]
+	if len(gem.Interactions) != 1 {
+		t.Fatalf("expected 1 interaction, got %d", len(gem.Interactions))
+	}
+
+	inter := gem.Interactions[0]
+	if inter.Response != "You win!" {
+		t.Errorf("expected response 'You win!', got %q", inter.Response)
+	}
+	// Should NOT have ending effects
+	for _, eff := range inter.Effects {
+		if eff.Type == "set_ending_id" || eff.Type == "set_ending_title" {
+			t.Errorf("backward-compatible win should not have ending effects, got %s", eff.Type)
+		}
+	}
+}
+
 func TestExpandNpcsEmpty(t *testing.T) {
 	spec := &StorySpec{
 		StartRoom: "hall",

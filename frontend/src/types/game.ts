@@ -7,6 +7,11 @@ export interface CreateGameResponse {
   inventory: ItemInfo[];
 }
 
+export interface ChoiceOption {
+  index: number;
+  text: string;
+}
+
 export interface CommandResponse {
   text: string;
   room_name: string;
@@ -15,6 +20,9 @@ export interface CommandResponse {
   game_over: boolean;
   game_status: string;
   inventory: ItemInfo[];
+  choices?: ChoiceOption[];
+  ending_id?: string;
+  ending_title?: string;
 }
 
 export interface ItemInfo {

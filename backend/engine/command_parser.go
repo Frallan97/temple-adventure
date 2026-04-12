@@ -1,6 +1,9 @@
 package engine
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 var verbAliases = map[string]string{
 	"l":       "look",
@@ -28,6 +31,8 @@ var verbAliases = map[string]string{
 	"clue":    "hint",
 	"speak":   "talk",
 	"chat":    "talk",
+	"respond": "say",
+	"choose":  "say",
 }
 
 type CommandParser struct{}
@@ -40,6 +45,11 @@ func (p *CommandParser) Parse(rawInput string) *ParsedCommand {
 	input := strings.TrimSpace(strings.ToLower(rawInput))
 	if input == "" {
 		return &ParsedCommand{Raw: rawInput, Verb: "", Target: ""}
+	}
+
+	// Bare number → say <number> (dialogue choice shortcut)
+	if isAllDigits(input) {
+		return &ParsedCommand{Raw: rawInput, Verb: "say", Target: input}
 	}
 
 	parts := strings.SplitN(input, " ", 2)
@@ -69,4 +79,13 @@ func (p *CommandParser) Parse(rawInput string) *ParsedCommand {
 	}
 
 	return &ParsedCommand{Raw: rawInput, Verb: verb, Target: target}
+}
+
+func isAllDigits(s string) bool {
+	for _, c := range s {
+		if !unicode.IsDigit(c) {
+			return false
+		}
+	}
+	return true
 }
