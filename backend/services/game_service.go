@@ -215,6 +215,48 @@ func (s *GameService) GetHistory(ctx context.Context, sessionID uuid.UUID, limit
 	return &models.HistoryResponse{Commands: commands, Total: total}, nil
 }
 
+func (s *GameService) GetGameLogs(ctx context.Context, sessionIDs []uuid.UUID) (*models.GameLogsResponse, error) {
+	if len(sessionIDs) == 0 {
+		return &models.GameLogsResponse{Games: []models.GameLogSummary{}}, nil
+	}
+
+	placeholders := make([]string, len(sessionIDs))
+	args := make([]interface{}, len(sessionIDs))
+	for i, id := range sessionIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(
+		`SELECT gs.id, gs.story_id, COALESCE(s.name, 'Unknown'), gs.status, gs.turn_number, gs.created_at, gs.updated_at
+		 FROM game_sessions gs
+		 LEFT JOIN stories s ON s.id = gs.story_id
+		 WHERE gs.id IN (%s)
+		 ORDER BY gs.updated_at DESC`,
+		strings.Join(placeholders, ","),
+	)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying game logs: %w", err)
+	}
+	defer rows.Close()
+
+	games := make([]models.GameLogSummary, 0)
+	for rows.Next() {
+		var g models.GameLogSummary
+		var storyID *uuid.UUID
+		if err := rows.Scan(&g.ID, &storyID, &g.StoryName, &g.Status, &g.TurnNumber, &g.CreatedAt, &g.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("scanning game log: %w", err)
+		}
+		if storyID != nil {
+			g.StoryID = *storyID
+		}
+		games = append(games, g)
+	}
+	return &models.GameLogsResponse{Games: games}, nil
+}
+
 // --- Internal helpers ---
 
 func (s *GameService) loadWorldState(ctx context.Context, sessionID uuid.UUID) (*engine.WorldState, *engine.Engine, error) {

@@ -44,3 +44,34 @@ export interface OutputEntry {
   type: "command" | "narrative" | "system" | "error";
   text: string;
 }
+
+export interface CommandEntry {
+  id: string;
+  session_id: string;
+  turn_number: number;
+  raw_input: string;
+  parsed_verb: string;
+  parsed_target: string;
+  room_id: string;
+  response_text: string;
+  created_at: string;
+}
+
+export interface HistoryResponse {
+  commands: CommandEntry[];
+  total: number;
+}
+
+export interface GameLogSummary {
+  id: string;
+  story_id: string;
+  story_name: string;
+  status: string;
+  turn_number: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GameLogsResponse {
+  games: GameLogSummary[];
+}

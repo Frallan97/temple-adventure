@@ -91,6 +91,20 @@ type HistoryResponse struct {
 	Total    int            `json:"total"`
 }
 
+type GameLogSummary struct {
+	ID         uuid.UUID `json:"id"`
+	StoryID    uuid.UUID `json:"story_id"`
+	StoryName  string    `json:"story_name"`
+	Status     string    `json:"status"`
+	TurnNumber int       `json:"turn_number"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type GameLogsResponse struct {
+	Games []GameLogSummary `json:"games"`
+}
+
 type ItemInfoResponse struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`

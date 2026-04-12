@@ -25,6 +25,7 @@ func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *Sto
 
 	r.Route("/api/v1", func(r chi.Router) {
 		// Game endpoints
+		r.Get("/games/logs", gameHandler.GetGameLogs)
 		r.Post("/games", gameHandler.CreateGame)
 		r.Get("/games/{id}", gameHandler.GetGame)
 		r.Post("/games/{id}/command", gameHandler.SendCommand)

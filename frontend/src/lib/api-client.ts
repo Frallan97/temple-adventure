@@ -1,4 +1,4 @@
-import type { CreateGameResponse, CommandResponse, GameState } from "../types/game";
+import type { CreateGameResponse, CommandResponse, GameState, HistoryResponse, GameLogsResponse } from "../types/game";
 import type {
   StoryListResponse,
   StoryResponse,
@@ -38,6 +38,12 @@ export const gameApi = {
       method: "POST",
       body: JSON.stringify({ input }),
     }),
+
+  getHistory: (id: string, limit = 1000, offset = 0) =>
+    apiRequest<HistoryResponse>(`/games/${id}/history?limit=${limit}&offset=${offset}`),
+
+  getLogs: (ids: string[]) =>
+    apiRequest<GameLogsResponse>(`/games/logs?ids=${ids.join(",")}`),
 };
 
 export const storyApi = {

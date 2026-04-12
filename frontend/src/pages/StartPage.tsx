@@ -163,12 +163,20 @@ export function StartPage({
             </span>
           </p>
 
-          <Link
-            to="/editor"
-            className="inline-block text-gray-600 text-xs hover:text-amber-400/60 transition-colors"
-          >
-            Story Editor &rarr;
-          </Link>
+          <div className="flex items-center justify-center gap-4">
+            <Link
+              to="/logs"
+              className="text-gray-600 text-xs hover:text-amber-400/60 transition-colors"
+            >
+              Game Logs &rarr;
+            </Link>
+            <Link
+              to="/editor"
+              className="text-gray-600 text-xs hover:text-amber-400/60 transition-colors"
+            >
+              Story Editor &rarr;
+            </Link>
+          </div>
         </div>
       </div>
     </div>

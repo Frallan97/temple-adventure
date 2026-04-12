@@ -124,6 +124,16 @@ export function useGame() {
           setGameStatus(resp.game_status);
           setEndingId(resp.ending_id || null);
           setEndingTitle(resp.ending_title || null);
+          // Save to game log history
+          if (gameId) {
+            try {
+              const logs: string[] = JSON.parse(localStorage.getItem("temple_game_logs") || "[]");
+              if (!logs.includes(gameId)) {
+                logs.unshift(gameId);
+                localStorage.setItem("temple_game_logs", JSON.stringify(logs.slice(0, 50)));
+              }
+            } catch { /* ignore */ }
+          }
         }
       } catch (err) {
         addOutput({ type: "error", text: `Error: ${err}` });

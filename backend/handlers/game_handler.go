@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"temple-adventure/models"
 	"temple-adventure/services"
@@ -99,6 +100,35 @@ func (h *GameHandler) GetGame(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] [session:%s] GetGameState failed", sessionID)
 		h.handleError(w, r, err, "Failed to get game state")
+		return
+	}
+	WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *GameHandler) GetGameLogs(w http.ResponseWriter, r *http.Request) {
+	idsParam := r.URL.Query().Get("ids")
+	if idsParam == "" {
+		WriteJSON(w, http.StatusOK, models.GameLogsResponse{Games: []models.GameLogSummary{}})
+		return
+	}
+
+	parts := strings.Split(idsParam, ",")
+	ids := make([]uuid.UUID, 0, len(parts))
+	for _, p := range parts {
+		id, err := uuid.Parse(strings.TrimSpace(p))
+		if err != nil {
+			continue
+		}
+		ids = append(ids, id)
+	}
+
+	if len(ids) > 50 {
+		ids = ids[:50]
+	}
+
+	resp, err := h.gameService.GetGameLogs(r.Context(), ids)
+	if err != nil {
+		h.handleError(w, r, err, "Failed to get game logs")
 		return
 	}
 	WriteJSON(w, http.StatusOK, resp)
