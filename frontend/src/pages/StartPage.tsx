@@ -1,7 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { storyApi } from "../lib/api-client";
 import type { StorySummary } from "../types/story";
+import { StarRating } from "../components/StarRating";
+
+const PAGE_SIZE = 12;
 
 interface StartPageProps {
   onNewGame: (storyId: string, storyName: string) => void;
@@ -17,14 +20,21 @@ export function StartPage({
   savedStoryName,
 }: StartPageProps) {
   const [stories, setStories] = useState<StorySummary[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const loadPage = useCallback((pageNum: number) => {
+    setLoading(true);
+    setError(null);
     storyApi
-      .list()
+      .list(PAGE_SIZE, pageNum * PAGE_SIZE)
       .then((resp) => {
         setStories(resp.stories || []);
+        setTotal(resp.total);
         setLoading(false);
       })
       .catch((err) => {
@@ -32,6 +42,10 @@ export function StartPage({
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    loadPage(page);
+  }, [page, loadPage]);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-950 font-mono text-amber-400 px-6 py-12">
@@ -95,9 +109,19 @@ export function StartPage({
                   <h3 className="text-amber-400 font-bold group-hover:text-amber-300 transition-colors">
                     {story.name}
                   </h3>
-                  <span className="text-gray-600 text-xs">
-                    by {story.author}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {story.rating_count > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <StarRating rating={story.avg_rating} size="sm" />
+                        <span className="text-gray-500 text-xs">
+                          ({story.rating_count})
+                        </span>
+                      </div>
+                    )}
+                    <span className="text-gray-600 text-xs">
+                      by {story.author}
+                    </span>
+                  </div>
                 </div>
                 {story.description && (
                   <p className="text-gray-400 text-sm leading-relaxed">
@@ -107,6 +131,28 @@ export function StartPage({
               </button>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1.5 text-sm border border-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+              >
+                Prev
+              </button>
+              <span className="text-gray-500 text-sm px-3">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page >= totalPages - 1}
+                className="px-3 py-1.5 text-sm border border-gray-700 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="pt-4 space-y-3 border-t border-gray-800/50">

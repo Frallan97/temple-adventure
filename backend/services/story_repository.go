@@ -73,28 +73,80 @@ func (r *StoryRepository) GetBySlug(ctx context.Context, slug string) (*models.S
 	return &story, nil
 }
 
-func (r *StoryRepository) List(ctx context.Context, publishedOnly bool) ([]models.StorySummary, error) {
-	query := `SELECT id, name, slug, description, author, is_published FROM stories`
+func (r *StoryRepository) List(ctx context.Context, publishedOnly bool, limit, offset int) ([]models.StorySummary, int, error) {
+	where := ""
 	if publishedOnly {
-		query += ` WHERE is_published = true`
+		where = " WHERE s.is_published = true"
 	}
-	query += ` ORDER BY name`
 
-	rows, err := r.db.QueryContext(ctx, query)
+	// Count total
+	var total int
+	countQuery := `SELECT COUNT(*) FROM stories s` + where
+	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("counting stories: %w", err)
+	}
+
+	query := `SELECT s.id, s.name, s.slug, s.description, s.author, s.is_published,
+		COALESCE(AVG(r.rating), 0) AS avg_rating,
+		COUNT(r.id) AS rating_count
+		FROM stories s
+		LEFT JOIN story_ratings r ON r.story_id = s.id` +
+		where +
+		` GROUP BY s.id ORDER BY s.name LIMIT $1 OFFSET $2`
+
+	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("listing stories: %w", err)
+		return nil, 0, fmt.Errorf("listing stories: %w", err)
 	}
 	defer rows.Close()
 
 	stories := make([]models.StorySummary, 0)
 	for rows.Next() {
 		var s models.StorySummary
-		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.Description, &s.Author, &s.IsPublished); err != nil {
-			return nil, fmt.Errorf("scanning story: %w", err)
+		if err := rows.Scan(&s.ID, &s.Name, &s.Slug, &s.Description, &s.Author, &s.IsPublished, &s.AvgRating, &s.RatingCount); err != nil {
+			return nil, 0, fmt.Errorf("scanning story: %w", err)
 		}
 		stories = append(stories, s)
 	}
-	return stories, nil
+	return stories, total, nil
+}
+
+// --- Ratings ---
+
+func (r *StoryRepository) RateStory(ctx context.Context, storyID, sessionID uuid.UUID, rating int) error {
+	_, err := r.db.ExecContext(ctx,
+		`INSERT INTO story_ratings (story_id, session_id, rating)
+		 VALUES ($1, $2, $3)
+		 ON CONFLICT (session_id) DO UPDATE SET rating = EXCLUDED.rating`,
+		storyID, sessionID, rating,
+	)
+	if err != nil {
+		return fmt.Errorf("rating story: %w", err)
+	}
+	return nil
+}
+
+func (r *StoryRepository) GetRating(ctx context.Context, storyID uuid.UUID, sessionID *uuid.UUID) (*models.StoryRatingResponse, error) {
+	resp := &models.StoryRatingResponse{}
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COALESCE(AVG(rating), 0), COUNT(id) FROM story_ratings WHERE story_id = $1`,
+		storyID,
+	).Scan(&resp.AvgRating, &resp.RatingCount)
+	if err != nil {
+		return nil, fmt.Errorf("getting rating: %w", err)
+	}
+
+	if sessionID != nil {
+		var userRating int
+		err := r.db.QueryRowContext(ctx,
+			`SELECT rating FROM story_ratings WHERE story_id = $1 AND session_id = $2`,
+			storyID, *sessionID,
+		).Scan(&userRating)
+		if err == nil {
+			resp.UserRating = &userRating
+		}
+	}
+	return resp, nil
 }
 
 func (r *StoryRepository) Update(ctx context.Context, id uuid.UUID, req models.UpdateStoryRequest) (*models.Story, error) {

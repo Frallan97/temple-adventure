@@ -5,10 +5,21 @@ export interface StorySummary {
   description: string;
   author: string;
   is_published: boolean;
+  avg_rating: number;
+  rating_count: number;
 }
 
 export interface StoryListResponse {
   stories: StorySummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface StoryRatingResponse {
+  avg_rating: number;
+  rating_count: number;
+  user_rating?: number;
 }
 
 export interface Story {

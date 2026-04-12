@@ -64,6 +64,8 @@ export function GamePage() {
         <GameOverOverlay
           status={game.gameStatus}
           endingTitle={game.endingTitle}
+          storyId={game.storyId}
+          gameId={game.gameId}
           onMainMenu={handleNewGameFromOverlay}
         />
       )}

@@ -40,6 +40,8 @@ func SetupRouter(cfg *config.Config, gameHandler *GameHandler, storyHandler *Sto
 			r.Delete("/", storyHandler.DeleteStory)
 			r.Post("/validate", storyHandler.ValidateStory)
 			r.Post("/publish", storyHandler.PublishStory)
+			r.Post("/ratings", storyHandler.RateStory)
+			r.Get("/ratings", storyHandler.GetStoryRating)
 
 			r.Put("/rooms/{roomId}", storyHandler.UpsertRoom)
 			r.Delete("/rooms/{roomId}", storyHandler.DeleteRoom)

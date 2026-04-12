@@ -3,6 +3,7 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"temple-adventure/models"
 	"temple-adventure/services"
@@ -41,9 +42,77 @@ func (h *StoryHandler) ListStories(w http.ResponseWriter, r *http.Request) {
 	// Editor requests get all stories, player requests only published
 	publishedOnly := r.URL.Query().Get("all") != "true"
 
-	resp, err := h.storyService.List(r.Context(), publishedOnly)
+	limit := 20
+	offset := 0
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
+			offset = parsed
+		}
+	}
+
+	resp, err := h.storyService.List(r.Context(), publishedOnly, limit, offset)
 	if err != nil {
 		h.handleError(w, r, err, "Failed to list stories")
+		return
+	}
+	WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *StoryHandler) RateStory(w http.ResponseWriter, r *http.Request) {
+	storyID, err := uuid.Parse(chi.URLParam(r, "storyId"))
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid story ID")
+		return
+	}
+
+	var req models.RateStoryRequest
+	if err := DecodeJSON(r, &req); err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	sessionIDStr := r.URL.Query().Get("session_id")
+	sessionID, err := uuid.Parse(sessionIDStr)
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "session_id query parameter is required")
+		return
+	}
+
+	if err := h.storyService.RateStory(r.Context(), storyID, sessionID, req.Rating); err != nil {
+		h.handleError(w, r, err, "Failed to rate story")
+		return
+	}
+
+	resp, err := h.storyService.GetRating(r.Context(), storyID, &sessionID)
+	if err != nil {
+		h.handleError(w, r, err, "Failed to get rating")
+		return
+	}
+	WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *StoryHandler) GetStoryRating(w http.ResponseWriter, r *http.Request) {
+	storyID, err := uuid.Parse(chi.URLParam(r, "storyId"))
+	if err != nil {
+		WriteError(w, http.StatusBadRequest, "Invalid story ID")
+		return
+	}
+
+	var sessionID *uuid.UUID
+	if s := r.URL.Query().Get("session_id"); s != "" {
+		if parsed, err := uuid.Parse(s); err == nil {
+			sessionID = &parsed
+		}
+	}
+
+	resp, err := h.storyService.GetRating(r.Context(), storyID, sessionID)
+	if err != nil {
+		h.handleError(w, r, err, "Failed to get rating")
 		return
 	}
 	WriteJSON(w, http.StatusOK, resp)

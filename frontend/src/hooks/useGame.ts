@@ -6,6 +6,9 @@ export function useGame() {
   const [gameId, setGameId] = useState<string | null>(() => {
     return localStorage.getItem("temple_game_id");
   });
+  const [storyId, setStoryId] = useState<string | null>(() => {
+    return localStorage.getItem("temple_story_id");
+  });
   const [storyName, setStoryName] = useState<string | null>(() => {
     return localStorage.getItem("temple_story_name");
   });
@@ -33,8 +36,10 @@ export function useGame() {
       try {
         const resp = await gameApi.create(storyId);
         setGameId(resp.id);
+        setStoryId(storyId);
         setStoryName(name);
         localStorage.setItem("temple_game_id", resp.id);
+        localStorage.setItem("temple_story_id", storyId);
         localStorage.setItem("temple_story_name", name);
         setRoomName(resp.room_name);
         setTurnNumber(resp.turn_number);
@@ -78,8 +83,10 @@ export function useGame() {
       ]);
     } catch {
       localStorage.removeItem("temple_game_id");
+      localStorage.removeItem("temple_story_id");
       localStorage.removeItem("temple_story_name");
       setGameId(null);
+      setStoryId(null);
       setStoryName(null);
     } finally {
       setIsLoading(false);
@@ -153,8 +160,10 @@ export function useGame() {
 
   const clearGame = useCallback(() => {
     localStorage.removeItem("temple_game_id");
+    localStorage.removeItem("temple_story_id");
     localStorage.removeItem("temple_story_name");
     setGameId(null);
+    setStoryId(null);
     setStoryName(null);
     setOutput([]);
     setInventory([]);
@@ -172,6 +181,7 @@ export function useGame() {
 
   return {
     gameId,
+    storyId,
     storyName,
     output,
     inventory,

@@ -55,12 +55,23 @@ func (s *StoryService) GetByID(ctx context.Context, id uuid.UUID) (*models.Story
 	}, nil
 }
 
-func (s *StoryService) List(ctx context.Context, publishedOnly bool) (*models.StoryListResponse, error) {
-	stories, err := s.repo.List(ctx, publishedOnly)
+func (s *StoryService) List(ctx context.Context, publishedOnly bool, limit, offset int) (*models.StoryListResponse, error) {
+	stories, total, err := s.repo.List(ctx, publishedOnly, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	return &models.StoryListResponse{Stories: stories}, nil
+	return &models.StoryListResponse{Stories: stories, Total: total, Limit: limit, Offset: offset}, nil
+}
+
+func (s *StoryService) RateStory(ctx context.Context, storyID, sessionID uuid.UUID, rating int) error {
+	if rating < 1 || rating > 5 {
+		return &models.APIError{StatusCode: 400, Message: "rating must be between 1 and 5"}
+	}
+	return s.repo.RateStory(ctx, storyID, sessionID, rating)
+}
+
+func (s *StoryService) GetRating(ctx context.Context, storyID uuid.UUID, sessionID *uuid.UUID) (*models.StoryRatingResponse, error) {
+	return s.repo.GetRating(ctx, storyID, sessionID)
 }
 
 func (s *StoryService) Update(ctx context.Context, id uuid.UUID, req models.UpdateStoryRequest) (*models.Story, error) {

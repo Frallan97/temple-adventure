@@ -29,6 +29,8 @@ type StorySummary struct {
 	Description string    `json:"description"`
 	Author      string    `json:"author"`
 	IsPublished bool      `json:"is_published"`
+	AvgRating   float64   `json:"avg_rating"`
+	RatingCount int       `json:"rating_count"`
 }
 
 // --- API request types ---
@@ -104,6 +106,27 @@ type StoryResponse struct {
 
 type StoryListResponse struct {
 	Stories []StorySummary `json:"stories"`
+	Total   int            `json:"total"`
+	Limit   int            `json:"limit"`
+	Offset  int            `json:"offset"`
+}
+
+type RateStoryRequest struct {
+	Rating int `json:"rating"`
+}
+
+type StoryRating struct {
+	ID        uuid.UUID `json:"id"`
+	StoryID   uuid.UUID `json:"story_id"`
+	SessionID uuid.UUID `json:"session_id"`
+	Rating    int       `json:"rating"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type StoryRatingResponse struct {
+	AvgRating   float64 `json:"avg_rating"`
+	RatingCount int     `json:"rating_count"`
+	UserRating  *int    `json:"user_rating,omitempty"`
 }
 
 type ValidationError struct {

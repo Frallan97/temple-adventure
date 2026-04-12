@@ -4,6 +4,7 @@ import type {
   StoryResponse,
   Story,
   ValidateResponse,
+  StoryRatingResponse,
   RoomDef,
   ItemDef,
   PuzzleDef,
@@ -40,8 +41,9 @@ export const gameApi = {
 };
 
 export const storyApi = {
-  list: () => apiRequest<StoryListResponse>("/stories"),
-  listAll: () => apiRequest<StoryListResponse>("/stories?all=true"),
+  list: (limit = 20, offset = 0) =>
+    apiRequest<StoryListResponse>(`/stories?limit=${limit}&offset=${offset}`),
+  listAll: () => apiRequest<StoryListResponse>("/stories?all=true&limit=1000"),
   get: (id: string) => apiRequest<StoryResponse>(`/stories/${id}/`),
   create: (data: { name: string; slug: string; description: string; author: string; start_room: string }) =>
     apiRequest<Story>("/stories", { method: "POST", body: JSON.stringify(data) }),
@@ -53,6 +55,15 @@ export const storyApi = {
     apiRequest<ValidateResponse>(`/stories/${id}/validate`, { method: "POST" }),
   publish: (id: string) =>
     apiRequest<void>(`/stories/${id}/publish`, { method: "POST" }),
+  rate: (storyId: string, sessionId: string, rating: number) =>
+    apiRequest<StoryRatingResponse>(`/stories/${storyId}/ratings?session_id=${sessionId}`, {
+      method: "POST",
+      body: JSON.stringify({ rating }),
+    }),
+  getRating: (storyId: string, sessionId?: string) =>
+    apiRequest<StoryRatingResponse>(
+      `/stories/${storyId}/ratings${sessionId ? `?session_id=${sessionId}` : ""}`
+    ),
 
   // Rooms
   upsertRoom: (storyId: string, roomId: string, data: Omit<RoomDef, "id">) =>
