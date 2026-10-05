@@ -2,6 +2,7 @@ package storygen
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"temple-adventure/engine"
@@ -49,9 +50,84 @@ func Expand(spec *StorySpec) (*engine.WorldDefinition, error) {
 		if err != nil {
 			return nil, fmt.Errorf("expanding puzzle %q: %w", ps.ID, err)
 		}
+		e.addPuzzleHint(ps)
 	}
 
 	return e.world, nil
+}
+
+// addPuzzleHint registers a room hint for a puzzle, shown only while that
+// puzzle is unsolved. Without this the `hint` command is dead for every
+// spec-authored story, since nothing else ever populates RoomDef.Hints.
+func (e *expander) addPuzzleHint(ps *PuzzleSpec) {
+	room := e.world.Rooms[ps.Room]
+	if room == nil {
+		return
+	}
+
+	text := strings.TrimSpace(ps.Description)
+	if text == "" {
+		text = defaultHintText(ps)
+	}
+	if text == "" {
+		return
+	}
+
+	// win_condition puzzles never produce a PuzzleDef, so puzzle.<id>.complete
+	// is never set for them; gate those on game_won instead.
+	gateVar := "puzzle." + ps.ID + ".complete"
+	if ps.Type == "win_condition" {
+		gateVar = "game_won"
+	}
+
+	room.Hints = append(room.Hints, engine.ConditionalHint{
+		Condition: &engine.Condition{
+			Type:   "var_equals",
+			Key:    gateVar,
+			Value:  true,
+			Negate: true,
+		},
+		Text: text,
+	})
+}
+
+// defaultHintText produces a mechanic-shaped nudge for puzzles whose author
+// left `description` empty. It names the verb and object, never the solution.
+func defaultHintText(ps *PuzzleSpec) string {
+	switch ps.Type {
+	case "key_lock":
+		return fmt.Sprintf("Something here needs %s. Try: %s %s",
+			itemPhrase(ps.KeyItem), or(ps.LockVerb, "use"), ps.LockTarget)
+	case "examine_learn":
+		return fmt.Sprintf("Study %s first, then %s %s",
+			itemPhrase(ps.SourceItem), or(ps.TargetVerb, "use"), ps.TargetItem)
+	case "fetch_quest":
+		return fmt.Sprintf("Bring %s here, then %s %s",
+			itemPhrase(ps.FetchItem), or(ps.FetchVerb, "use"), ps.FetchTarget)
+	case "timed_challenge":
+		return fmt.Sprintf("Once you %s %s the clock starts — have what you need ready first",
+			or(ps.TriggerVerb, "turn"), ps.TriggerItem)
+	case "combination_lock":
+		return fmt.Sprintf("Try: %s %s — more than once",
+			or(ps.CombinationVerb, "turn"), ps.CombinationTarget)
+	case "item_combine":
+		return fmt.Sprintf("%s and %s might fit together. Try: %s %s",
+			itemPhrase(ps.CombineItemA), itemPhrase(ps.CombineItemB),
+			or(ps.CombineVerb, "use"), ps.CombineItemA)
+	case "counter_puzzle":
+		return fmt.Sprintf("Several things must be placed here. Try: %s <item>",
+			or(ps.CounterVerb, "use"))
+	case "win_condition":
+		return fmt.Sprintf("Try: %s %s", or(ps.WinVerb, "take"), ps.WinItem)
+	}
+	return ""
+}
+
+func itemPhrase(itemID string) string {
+	if itemID == "" {
+		return "something"
+	}
+	return "the " + strings.ReplaceAll(itemID, "_", " ")
 }
 
 type expander struct {
@@ -208,7 +284,10 @@ func (e *expander) expandKeyLock(ps *PuzzleSpec) error {
 				},
 			},
 		},
-		CompletionText: ps.CompletionText,
+		// Deliberately empty: the unlock interaction above already responds with
+		// CompletionText. Setting it here too would print the text twice, since
+		// CheckPuzzleProgress appends it when the final step completes.
+		CompletionText: "",
 	}
 
 	e.removeLockAndRegister(ps.Room, ps.UnlockDirection, ps.UnlockRoom, ps.ID)
@@ -267,6 +346,9 @@ func (e *expander) expandExamineLearn(ps *PuzzleSpec) error {
 	}
 
 	condVar := solvedVar
+	// CompletionText is suppressed on the PuzzleDef when an interaction already
+	// responds with it, otherwise CheckPuzzleProgress prints it a second time.
+	completionText := ps.CompletionText
 
 	// If also unlocks a direction, add unlock mechanic
 	if ps.UnlockDirection != "" && ps.UnlockRoom != "" {
@@ -277,6 +359,7 @@ func (e *expander) expandExamineLearn(ps *PuzzleSpec) error {
 			// e.g., "turn panel" (solve) then "use panel" (unlock)
 			unlockedVar := ps.ID + "_unlocked"
 			condVar = unlockedVar
+			completionText = "" // the unlock interaction below responds with it
 
 			tgtItem.Interactions = append(tgtItem.Interactions, solveInteraction)
 			tgtItem.Interactions = append(tgtItem.Interactions, engine.Interaction{
@@ -323,7 +406,7 @@ func (e *expander) expandExamineLearn(ps *PuzzleSpec) error {
 		Name:           ps.Name,
 		Description:    ps.Description,
 		Steps:          steps,
-		CompletionText: ps.CompletionText,
+		CompletionText: completionText,
 	}
 
 	e.addConditionalDesc(ps.Room, condVar)
@@ -460,14 +543,32 @@ func (e *expander) expandTimedChallenge(ps *PuzzleSpec) error {
 			fetchEffects = append(fetchEffects, engine.Effect{Type: "remove_item", Key: ps.FetchItem})
 		}
 
+		failedVar := "puzzle." + ps.ID + ".failed"
+
 		fetchItem.Interactions = append(fetchItem.Interactions, engine.Interaction{
 			Verb: fetchVerb,
 			Conditions: []engine.Condition{
 				{Type: "in_room", Key: fetchRoom},
 				{Type: "var_equals", Key: startedVar, Value: true},
+				// Once the window has expired the puzzle is skipped by
+				// CheckPuzzleProgress, so the unlock step can never run. Without
+				// this guard the player still gets the success text and is left
+				// in a silently unwinnable state.
+				{Type: "var_equals", Key: failedVar, Value: true, Negate: true},
 			},
 			Effects:  fetchEffects,
 			Response: ps.FetchSuccessText,
+		})
+
+		// Post-failure: explain why nothing happens instead of claiming success.
+		fetchItem.Interactions = append(fetchItem.Interactions, engine.Interaction{
+			Verb: fetchVerb,
+			Conditions: []engine.Condition{
+				{Type: "in_room", Key: fetchRoom},
+				{Type: "var_equals", Key: failedVar, Value: true},
+			},
+			Response: or(ps.TargetFailText,
+				"The mechanism is dead — the moment has passed, and nothing you do here will wake it again."),
 		})
 
 		var solveEffects []engine.Effect
@@ -517,12 +618,35 @@ func (e *expander) expandWinCondition(ps *PuzzleSpec) error {
 
 	if len(ps.Endings) > 0 {
 		// Conditional endings: create one interaction per ending.
-		// Specific endings (with conditions) first, fallback (no conditions) last.
+		// The engine takes the FIRST interaction whose conditions pass, so every
+		// conditional ending must precede the unconditional fallback — a fallback
+		// listed earlier would swallow all of them. Authors control the relative
+		// order of conditional endings; the fallback is forced last here rather
+		// than trusting spec order.
+		ordered := make([]EndingSpec, 0, len(ps.Endings))
+		var fallbacks []EndingSpec
 		for _, ending := range ps.Endings {
+			if len(ending.Conditions) == 0 {
+				fallbacks = append(fallbacks, ending)
+				continue
+			}
+			ordered = append(ordered, ending)
+		}
+		ordered = append(ordered, fallbacks...)
+
+		for _, ending := range ordered {
+			// Sorted so expansion is deterministic (map order is random in Go).
+			// All conditions must pass, so order carries no meaning.
+			keys := make([]string, 0, len(ending.Conditions))
+			for k := range ending.Conditions {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+
 			var conditions []engine.Condition
-			for k, v := range ending.Conditions {
+			for _, k := range keys {
 				conditions = append(conditions, engine.Condition{
-					Type: "var_equals", Key: k, Value: parseConditionValue(v),
+					Type: "var_equals", Key: k, Value: parseConditionValue(ending.Conditions[k]),
 				})
 			}
 

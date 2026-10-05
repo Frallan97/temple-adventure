@@ -2,6 +2,8 @@ package storygen
 
 import (
 	"testing"
+
+	"temple-adventure/engine"
 )
 
 func TestExpandKeyLock(t *testing.T) {
@@ -334,25 +336,45 @@ func TestExpandTimedChallenge(t *testing.T) {
 		t.Fatalf("expected 2 pull interactions (start + already active), got %d", pullCount)
 	}
 
-	// Mirror should have use interaction requiring timer started
+	// Mirror should have a success "use" interaction gated on the timer having
+	// started AND the puzzle not having failed, plus a separate post-failure
+	// interaction so an expired window doesn't still report success.
 	mirror := world.Items["mirror"]
-	found := false
-	for _, inter := range mirror.Interactions {
-		if inter.Verb == "use" {
-			found = true
-			hasTimerCond := false
-			for _, c := range inter.Conditions {
-				if c.Key == "puzzle.timed_puzzle.started" {
-					hasTimerCond = true
-				}
-			}
-			if !hasTimerCond {
-				t.Fatal("fetch interaction should require timer started")
+	var success, postFailure *engine.Interaction
+	for i := range mirror.Interactions {
+		inter := &mirror.Interactions[i]
+		if inter.Verb != "use" {
+			continue
+		}
+		started, failedNegated, failedRequired := false, false, false
+		for _, c := range inter.Conditions {
+			switch {
+			case c.Key == "puzzle.timed_puzzle.started":
+				started = true
+			case c.Key == "puzzle.timed_puzzle.failed" && c.Negate:
+				failedNegated = true
+			case c.Key == "puzzle.timed_puzzle.failed" && !c.Negate:
+				failedRequired = true
 			}
 		}
+		if started && failedNegated {
+			success = inter
+		}
+		if failedRequired {
+			postFailure = inter
+		}
 	}
-	if !found {
-		t.Fatal("mirror should have use interaction")
+	if success == nil {
+		t.Fatal("fetch interaction should require timer started and puzzle not failed")
+	}
+	if len(success.Effects) == 0 {
+		t.Fatal("success interaction should apply effects")
+	}
+	if postFailure == nil {
+		t.Fatal("expected a post-failure use interaction explaining the dead mechanism")
+	}
+	if len(postFailure.Effects) != 0 {
+		t.Fatal("post-failure interaction must not apply effects")
 	}
 }
 

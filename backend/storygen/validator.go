@@ -141,6 +141,7 @@ func ValidateSpec(spec *StorySpec) []string {
 				errs = append(errs, fmt.Sprintf("puzzle %q: 'win_text' is ignored when 'endings' array is present — remove win_text or use it as the fallback ending text", ps.ID))
 			}
 			hasFallback := false
+			fallbackCount := 0
 			for _, ending := range ps.Endings {
 				if ending.ID == "" {
 					errs = append(errs, fmt.Sprintf("puzzle %q: ending is missing 'id'", ps.ID))
@@ -154,10 +155,14 @@ func ValidateSpec(spec *StorySpec) []string {
 				}
 				if len(ending.Conditions) == 0 {
 					hasFallback = true
+					fallbackCount++
 				}
 			}
 			if len(ps.Endings) > 0 && !hasFallback {
 				errs = append(errs, fmt.Sprintf("puzzle %q: endings array has no fallback ending (an ending with no conditions) — player may see no ending text", ps.ID))
+			}
+			if fallbackCount > 1 {
+				errs = append(errs, fmt.Sprintf("puzzle %q: endings array has %d fallback endings (no conditions) — only the first can ever be reached", ps.ID, fallbackCount))
 			}
 			// Track EndingID from per-puzzle field
 			if ps.EndingID != "" {

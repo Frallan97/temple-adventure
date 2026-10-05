@@ -2,10 +2,32 @@ package engine
 
 import (
 	"fmt"
+	"log"
+	"strconv"
 	"strings"
 )
 
+// KnownConditionTypes is the set of condition types the evaluator understands.
+// Anything outside this set is a content error (usually a typo).
+var KnownConditionTypes = map[string]bool{
+	"has_item":        true,
+	"var_equals":      true,
+	"var_gte":         true,
+	"var_lte":         true,
+	"in_room":         true,
+	"item_in_room":    true,
+	"puzzle_complete": true,
+	"npc_in_room":     true,
+}
+
 func EvaluateCondition(state *WorldState, cond Condition) bool {
+	// An unrecognised type is always false, even when negated. Applying Negate
+	// here would turn a typo'd condition into an always-open gate.
+	if !KnownConditionTypes[cond.Type] {
+		log.Printf("[engine] unknown condition type %q (key=%q) — treating as false", cond.Type, cond.Key)
+		return false
+	}
+
 	result := evaluateConditionInner(state, cond)
 	if cond.Negate {
 		return !result
@@ -30,14 +52,14 @@ func evaluateConditionInner(state *WorldState, cond Condition) bool {
 		if !ok {
 			return false
 		}
-		return v.IntVal >= toInt(cond.Value)
+		return variableInt(v) >= toInt(cond.Value)
 
 	case "var_lte":
 		v, ok := state.Variables[cond.Key]
 		if !ok {
 			return false
 		}
-		return v.IntVal <= toInt(cond.Value)
+		return variableInt(v) <= toInt(cond.Value)
 
 	case "in_room":
 		return state.CurrentRoom == fmt.Sprintf("%v", cond.Key)
@@ -99,10 +121,18 @@ func ApplyEffect(state *WorldState, effect Effect) {
 		delete(state.Inventory, effect.Key)
 
 	case "add_room_item":
-		roomID := fmt.Sprintf("%v", effect.Value)
+		// Defaults to the current room, matching remove_room_item.
+		roomID := state.CurrentRoom
+		if effect.Value != nil {
+			if s := fmt.Sprintf("%v", effect.Value); s != "" {
+				roomID = s
+			}
+		}
 		if rs, ok := state.RoomStates[roomID]; ok {
 			rs.AddedItems[effect.Key] = true
 			delete(rs.RemovedItems, effect.Key)
+		} else {
+			log.Printf("[engine] add_room_item: no room state for %q (item %q not placed)", roomID, effect.Key)
 		}
 
 	case "remove_room_item":
@@ -252,6 +282,23 @@ func GetRoomConnections(state *WorldState, world *WorldDefinition, roomID string
 
 // --- Helpers ---
 
+// variableInt reads a variable as a number. Dialogue `set_var` shorthand stores
+// everything as a string, so numeric comparisons must look past Type.
+func variableInt(v Variable) int {
+	switch v.Type {
+	case "int":
+		return v.IntVal
+	case "bool":
+		if v.BoolVal {
+			return 1
+		}
+		return 0
+	case "string":
+		return toInt(v.StrVal)
+	}
+	return v.IntVal
+}
+
 func variableEquals(v Variable, value interface{}) bool {
 	switch v.Type {
 	case "bool":
@@ -286,7 +333,15 @@ func toInt(value interface{}) int {
 	case float64:
 		return int(v)
 	case string:
-		return 0
+		// Numeric strings are common in authored content ("3") and in values
+		// round-tripped through JSON/YAML. Silently returning 0 here made
+		// var_gte comparisons trivially true.
+		n, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil {
+			log.Printf("[engine] non-numeric value %q used in a numeric comparison — treating as 0", v)
+			return 0
+		}
+		return n
 	default:
 		return 0
 	}

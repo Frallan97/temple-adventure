@@ -35,6 +35,31 @@ var verbAliases = map[string]string{
 	"choose":  "say",
 }
 
+// fillerWords are dropped from the front of a command target so that natural
+// phrasings ("talk to keeper", "take the relic", "look at altar") resolve to
+// the same target as the bare form.
+var fillerWords = map[string]bool{
+	"to": true, "at": true, "the": true, "a": true, "an": true,
+	"on": true, "with": true, "into": true, "in": true, "about": true,
+	"my": true, "of": true,
+	// Note: direction words ("up", "down", "north"…) are deliberately absent —
+	// they are real targets for `move`.
+}
+
+// stripFiller removes leading filler words from a target phrase.
+func stripFiller(target string) string {
+	words := strings.Fields(target)
+	i := 0
+	for i < len(words) && fillerWords[words[i]] {
+		i++
+	}
+	// Never strip the phrase down to nothing — "take the" should still look for "the".
+	if i >= len(words) {
+		return target
+	}
+	return strings.Join(words[i:], " ")
+}
+
 type CommandParser struct{}
 
 func NewCommandParser() *CommandParser {
@@ -56,7 +81,7 @@ func (p *CommandParser) Parse(rawInput string) *ParsedCommand {
 	verb := parts[0]
 	target := ""
 	if len(parts) > 1 {
-		target = strings.TrimSpace(parts[1])
+		target = stripFiller(strings.TrimSpace(parts[1]))
 	}
 
 	// Check if the full input matches an alias (e.g., "n" -> "move north")
