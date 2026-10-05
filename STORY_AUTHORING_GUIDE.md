@@ -461,6 +461,7 @@ For branching conversations with player choices. When `dialogue` is present, it 
 | `node_id` | string | Yes | Unique ID within this NPC |
 | `text` | string | Yes | What the NPC says |
 | `topic` | string | No | If set, reachable via `ask <npc> about <topic>` |
+| `conditions` | object | No | `{"var": "value"}` — all must match for this node to be used |
 | `choices` | array | No | Player choices (if absent, conversation ends) |
 
 ### Dialogue Choice Fields
@@ -470,18 +471,55 @@ For branching conversations with player choices. When `dialogue` is present, it 
 | `text` | string | Yes | What the player says (shown as numbered option) |
 | `next_node` | string | Yes | Node ID to go to, or `"__exit__"` to end |
 | `need_item` | string | No | Only show this choice if player has the item |
+| `need_var` | string | No | Only show this choice if a variable matches (format: `"key=value"`) |
 | `set_var` | string | No | Set a variable on choose (format: `"key=value"`) |
 | `give_item` | string | No | Add an item to player inventory on choose |
 
 ### How Dialogue Works
 
-1. **`talk <npc>`** starts at the first node with no `topic` (the greeting). If already in a conversation, resumes at the current node.
+1. **`talk <npc>`** starts at an *entry node* — a node no choice points at. If already in a conversation, resumes at the current node.
 2. **`ask <npc> about <topic>`** jumps to the node with that `topic` value.
 3. The NPC's text is shown, followed by numbered choices.
 4. **`say <N>`** or just typing `<N>` selects a choice.
-5. Choices with `need_item` are hidden if the player doesn't have the item.
+5. Choices with `need_item` or `need_var` are hidden when unsatisfied.
 6. `next_node: "__exit__"` or an empty string ends the conversation.
 7. A node with no `choices` ends the conversation automatically.
+
+Trees nest to any depth — just point `next_node` at another node. There is no
+level limit; `salon.json` runs eight levels deep.
+
+### Different dialogue on a later conversation
+
+Give an entry node `conditions` to change what an NPC says based on what the
+player has done. The engine uses the **first entry node whose conditions all
+pass**, so order the specific cases from most to least specific, and leave
+exactly one entry node with no `conditions` as the fallback:
+
+```json
+"dialogue": [
+  { "node_id": "greet_betrayed", "conditions": { "betrayed_pip": "yes" },
+    "text": "You again. No." },
+  { "node_id": "greet_paid", "conditions": { "paid_vashti": "yes" },
+    "text": "Back already. Ask." },
+  { "node_id": "greet_first", "text": "I don't know your face." }
+]
+```
+
+Set those variables from choices with `set_var`, or let puzzles set them
+(`<puzzle_id>_solved`, `puzzle.<id>.complete`).
+
+Rules the validator enforces:
+
+- Exactly one entry node may be unconditional. Two bare entry nodes is an
+  error — only the first could ever be reached.
+- At least one entry node must be unconditional, or the NPC may refuse to talk
+  once every condition fails.
+- Conditional entry nodes are emitted ahead of the fallback automatically, so
+  their position in the array does not matter — but the order *among*
+  conditional nodes is yours and does matter when several can be true at once.
+
+See `stories/night_market.json` for a worked example: three NPCs, four
+conditional greetings on one of them, and five endings keyed on dialogue state.
 
 ### Dialogue State
 

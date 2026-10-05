@@ -170,6 +170,85 @@ func (e *expander) buildItems() {
 	}
 }
 
+// splitKeyValue parses a "key=value" shorthand.
+func splitKeyValue(s string) (string, string, bool) {
+	if s == "" {
+		return "", "", false
+	}
+	parts := strings.SplitN(s, "=", 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	k := strings.TrimSpace(parts[0])
+	if k == "" {
+		return "", "", false
+	}
+	return k, strings.TrimSpace(parts[1]), true
+}
+
+// flatConditions converts a {var: value} map into engine conditions. Keys are
+// sorted so expansion is deterministic regardless of Go map iteration order.
+func flatConditions(m map[string]string) []engine.Condition {
+	if len(m) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	conds := make([]engine.Condition, 0, len(keys))
+	for _, k := range keys {
+		conds = append(conds, engine.Condition{
+			Type: "var_equals", Key: k, Value: parseConditionValue(m[k]),
+		})
+	}
+	return conds
+}
+
+// orderDialogue arranges nodes so the engine's "first entry node whose
+// conditions pass" rule does what authors mean.
+//
+// An entry node is one no choice points at. Conditional entry nodes must come
+// before the unconditional default, or the default would always win — the same
+// first-match-wins trap that ending order had. Interior nodes are pushed last
+// so they can never be mistaken for a greeting.
+func orderDialogue(nodes []DialogueNodeSpec) []DialogueNodeSpec {
+	targeted := make(map[string]bool)
+	for _, n := range nodes {
+		for _, c := range n.Choices {
+			if c.NextNode != "" && c.NextNode != "__exit__" {
+				targeted[c.NextNode] = true
+			}
+		}
+	}
+
+	var conditionalEntries, defaultEntries, interior []DialogueNodeSpec
+	for _, n := range nodes {
+		switch {
+		case targeted[n.NodeID]:
+			interior = append(interior, n)
+		case len(n.Conditions) > 0:
+			conditionalEntries = append(conditionalEntries, n)
+		default:
+			defaultEntries = append(defaultEntries, n)
+		}
+	}
+
+	// Every node is targeted (fully cyclic tree) — preserve author order rather
+	// than guessing, so behaviour matches the pre-change engine.
+	if len(conditionalEntries) == 0 && len(defaultEntries) == 0 {
+		return nodes
+	}
+
+	ordered := make([]DialogueNodeSpec, 0, len(nodes))
+	ordered = append(ordered, conditionalEntries...)
+	ordered = append(ordered, defaultEntries...)
+	ordered = append(ordered, interior...)
+	return ordered
+}
+
 func (e *expander) buildNpcs() {
 	for id, ns := range e.spec.Npcs {
 		npc := &engine.NpcDef{
@@ -182,11 +261,12 @@ func (e *expander) buildNpcs() {
 
 		if len(ns.Dialogue) > 0 {
 			// Full dialogue tree mode
-			for _, dn := range ns.Dialogue {
+			for _, dn := range orderDialogue(ns.Dialogue) {
 				dl := engine.DialogueLine{
-					NodeID:   dn.NodeID,
-					Topic:    dn.Topic,
-					Response: dn.Text,
+					NodeID:     dn.NodeID,
+					Topic:      dn.Topic,
+					Response:   dn.Text,
+					Conditions: flatConditions(dn.Conditions),
 				}
 				for _, cs := range dn.Choices {
 					choice := engine.DialogueChoice{
@@ -196,6 +276,11 @@ func (e *expander) buildNpcs() {
 					if cs.NeedItem != "" {
 						choice.Conditions = append(choice.Conditions, engine.Condition{
 							Type: "has_item", Key: cs.NeedItem,
+						})
+					}
+					if k, v, ok := splitKeyValue(cs.NeedVar); ok {
+						choice.Conditions = append(choice.Conditions, engine.Condition{
+							Type: "var_equals", Key: k, Value: parseConditionValue(v),
 						})
 					}
 					if cs.GiveItem != "" {

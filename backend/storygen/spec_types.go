@@ -134,11 +134,20 @@ type NpcSpec struct {
 }
 
 // DialogueNodeSpec defines a node in a dialogue tree.
+//
+// A node that no choice points at is an *entry node* — a candidate for what the
+// NPC says when you `talk` to them. Give entry nodes `conditions` to vary the
+// opening line by what the player has done; the engine picks the first entry
+// node whose conditions all pass, so conditional entries are emitted ahead of
+// the unconditional default automatically (see expander.orderDialogue).
 type DialogueNodeSpec struct {
-	NodeID  string               `json:"node_id"`
-	Text    string               `json:"text"`
-	Topic   string               `json:"topic,omitempty"`
-	Choices []DialogueChoiceSpec `json:"choices,omitempty"`
+	NodeID string `json:"node_id"`
+	Text   string `json:"text"`
+	Topic  string `json:"topic,omitempty"`
+	// Conditions gates this node on variable values: key → expected value.
+	// All must pass. Same flat form as EndingSpec.Conditions.
+	Conditions map[string]string    `json:"conditions,omitempty"`
+	Choices    []DialogueChoiceSpec `json:"choices,omitempty"`
 }
 
 // DialogueChoiceSpec defines a player choice in a dialogue node.
@@ -148,6 +157,7 @@ type DialogueChoiceSpec struct {
 	SetVar   string `json:"set_var,omitempty"`   // shorthand: "key=value" → set_var effect
 	GiveItem string `json:"give_item,omitempty"` // shorthand: add_item effect
 	NeedItem string `json:"need_item,omitempty"` // shorthand: has_item condition
+	NeedVar  string `json:"need_var,omitempty"`  // shorthand: "key=value" → var_equals condition
 }
 
 // Reverse direction mapping for bidirectional connections.

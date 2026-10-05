@@ -1,0 +1,915 @@
+{
+  "title": "The Night Market",
+  "slug": "night-market",
+  "description": "A sealed letter, a canal city after dark, and three people who all want something from you. How you treat them decides how the night ends.",
+  "author": "Temple Adventure Team",
+  "start_room": "quay",
+  "rooms": {
+    "quay": {
+      "name": "The Quay",
+      "description": "Wet stone steps climb from the black water. A lantern gutters on its post, throwing the mooring posts into long shadows. The market's noise spills down from the north — voices, a hammer, someone laughing too loudly.",
+      "connections": {
+        "north": "market_row"
+      },
+      "items": [
+        "oil_lamp",
+        "warning_notice"
+      ]
+    },
+    "market_row": {
+      "name": "Market Row",
+      "description": "Stalls crowd both banks of the canal, lit by hanging lamps in coloured glass. A broker sits behind a folding table stacked with ledgers, watching everyone and buying nothing. Spice smoke drifts in from the east.",
+      "connections": {
+        "south": "quay",
+        "east": "spice_stall",
+        "north": "customs_post"
+      },
+      "items": [
+        "ledger",
+        "silk_bolt"
+      ]
+    },
+    "spice_stall": {
+      "name": "The Spice Stall",
+      "description": "Sacks of saffron and black pepper lean against each other in the dark. The stallholder is nowhere to be seen. A thin child sits on an upturned crate, swinging their heels, watching the crowd with professional interest.",
+      "connections": {
+        "west": "market_row"
+      },
+      "items": [
+        "saffron_tin",
+        "spice_sacks"
+      ]
+    },
+    "customs_post": {
+      "name": "The Customs Post",
+      "description": "A squat stone building at the water's edge. An officer stands under the awning with a stamp press and the expression of a man near the end of a long shift. A heavy door leads east. Steps lead down to the moorings, barred by a chain.",
+      "connections": {
+        "south": "market_row"
+      },
+      "items": [
+        "office_door",
+        "boat_chain",
+        "stamp_press"
+      ]
+    },
+    "locked_office": {
+      "name": "The Back Office",
+      "description": "A cramped room that smells of ink and damp paper. Shipping manifests are spiked on a nail in bundles. A strongbox sits under the desk, far too heavy to move.",
+      "description_after_puzzle": "A cramped room that smells of ink and damp paper. The manifest bundle lies open where you left it.",
+      "items": [
+        "manifest",
+        "strongbox"
+      ]
+    },
+    "canal_boat": {
+      "name": "The Mooring",
+      "description": "A flat-bottomed canal boat knocks gently against the stones. Coiled rope, a bailing tin, and — wedged under the bench where someone meant it to be found — a letter with an unbroken wax seal.",
+      "items": [
+        "sealed_letter",
+        "bailing_tin"
+      ]
+    }
+  },
+  "items": {
+    "oil_lamp": {
+      "name": "oil lamp",
+      "description": "A small brass lamp, still warm. Enough oil for a few hours.",
+      "aliases": [
+        "lamp",
+        "oil lamp",
+        "brass lamp"
+      ],
+      "portable": true
+    },
+    "warning_notice": {
+      "name": "harbour notice",
+      "description": "A damp notice nailed to the post: ALL SEALED CORRESPONDENCE MUST BE PRESENTED AT THE CUSTOMS POST. PENALTY FOR EVASION: SEIZURE.",
+      "aliases": [
+        "notice",
+        "harbour notice",
+        "sign"
+      ],
+      "portable": false
+    },
+    "ledger": {
+      "name": "broker's ledger",
+      "description": "Vashti's ledger, open to a page of names and sums. Most entries are initials. One is a full name, circled twice.",
+      "aliases": [
+        "ledger",
+        "brokers ledger",
+        "book"
+      ],
+      "portable": false
+    },
+    "silk_bolt": {
+      "name": "bolt of silk",
+      "description": "A short bolt of river-green silk. Good quality, badly stored.",
+      "aliases": [
+        "silk",
+        "bolt",
+        "bolt of silk"
+      ],
+      "portable": true
+    },
+    "saffron_tin": {
+      "name": "saffron tin",
+      "description": "A dented tin of saffron threads. Worth more than everything else on this stall combined.",
+      "aliases": [
+        "saffron",
+        "tin",
+        "saffron tin"
+      ],
+      "portable": true
+    },
+    "spice_sacks": {
+      "name": "spice sacks",
+      "description": "Burlap sacks slumped against the stall wall. Something has been hollowed out behind them — a child-sized gap.",
+      "aliases": [
+        "sacks",
+        "spice sacks",
+        "burlap"
+      ],
+      "portable": false
+    },
+    "office_door": {
+      "name": "office door",
+      "description": "A heavy door with a brass lock, worn bright around the keyhole.",
+      "aliases": [
+        "door",
+        "office door",
+        "heavy door"
+      ],
+      "portable": false
+    },
+    "boat_chain": {
+      "name": "mooring chain",
+      "description": "A chain across the steps down to the moorings, fixed with an official customs padlock.",
+      "aliases": [
+        "chain",
+        "mooring chain",
+        "padlock"
+      ],
+      "portable": false
+    },
+    "stamp_press": {
+      "name": "stamp press",
+      "description": "A cast-iron press for stamping customs seals. The officer keeps one hand on it at all times.",
+      "aliases": [
+        "press",
+        "stamp press",
+        "stamp"
+      ],
+      "portable": false
+    },
+    "manifest": {
+      "name": "shipping manifest",
+      "description": "A bundle of manifests. One entry is marked FOR COLLECTION and gives a name — the same name circled in Vashti's ledger.",
+      "aliases": [
+        "manifest",
+        "manifests",
+        "shipping manifest",
+        "papers"
+      ],
+      "portable": true
+    },
+    "strongbox": {
+      "name": "strongbox",
+      "description": "An iron strongbox, bolted to the floor. Empty, lid open. Whatever was in it is already gone.",
+      "aliases": [
+        "strongbox",
+        "box",
+        "iron box"
+      ],
+      "portable": false
+    },
+    "sealed_letter": {
+      "name": "sealed letter",
+      "description": "Heavy paper, unbroken wax seal, no address — only a mark pressed into the wax.",
+      "aliases": [
+        "letter",
+        "sealed letter",
+        "seal"
+      ],
+      "portable": true
+    },
+    "bailing_tin": {
+      "name": "bailing tin",
+      "description": "A battered tin for scooping water out of the boat.",
+      "aliases": [
+        "bailing tin",
+        "tin can"
+      ],
+      "portable": true
+    },
+    "coin_purse": {
+      "name": "coin purse",
+      "description": "A soft leather purse, surprisingly heavy. Pip's night's work, handed over far too easily.",
+      "aliases": [
+        "purse",
+        "coin purse",
+        "coins",
+        "money"
+      ],
+      "portable": true
+    },
+    "brass_key": {
+      "name": "brass key",
+      "description": "A small brass key, warm from Vashti's pocket.",
+      "aliases": [
+        "key",
+        "brass key"
+      ],
+      "portable": true
+    },
+    "transit_pass": {
+      "name": "transit pass",
+      "description": "A customs transit pass, stamped and signed. It will get a boat out of the basin.",
+      "aliases": [
+        "pass",
+        "transit pass",
+        "papers"
+      ],
+      "portable": true
+    }
+  },
+  "npcs": {
+    "vashti": {
+      "name": "Vashti",
+      "description": "A broker of middle years with one clouded eye and a ledger she never closes. She looks at your hands before your face.",
+      "aliases": [
+        "vashti",
+        "broker",
+        "woman"
+      ],
+      "room": "market_row",
+      "dialogue": [
+        {
+          "node_id": "v_betrayed",
+          "conditions": {
+            "betrayed_pip": "yes"
+          },
+          "text": "Vashti does not look up from her ledger. \"The child is in a cell tonight because of you. No, don't explain. I heard it from three people before you walked over here.\" She turns a page. \"Whatever you came to ask, the answer is no.\"",
+          "choices": [
+            {
+              "text": "Try to explain anyway",
+              "next_node": "v_betrayed_push"
+            },
+            {
+              "text": "Leave her to it",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_lied",
+          "conditions": {
+            "lied_to_vashti": "yes"
+          },
+          "text": "\"You.\" Vashti sets down her pen. \"You told me that letter was yours. I have been in this trade thirty years and I let you stand there and lie to my face.\" A pause. \"That is my failing, not yours. But I will not be of use to you twice.\"",
+          "choices": [
+            {
+              "text": "Admit the lie",
+              "next_node": "v_lied_confess"
+            },
+            {
+              "text": "Say nothing",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_paid_again",
+          "conditions": {
+            "paid_vashti": "yes"
+          },
+          "text": "Vashti's clouded eye finds you before the good one does. \"Back already. You paid without haggling, which tells me either you are rich or you are frightened.\" She almost smiles. \"I don't care which. Ask.\"",
+          "choices": [
+            {
+              "text": "Ask what the mark on the seal means",
+              "next_node": "v_mark"
+            },
+            {
+              "text": "Ask about the customs officer",
+              "next_node": "v_halloran"
+            },
+            {
+              "text": "Ask about the child at the spice stall",
+              "next_node": "v_pip"
+            },
+            {
+              "text": "Nothing tonight",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_truthful_again",
+          "conditions": {
+            "told_truth": "yes"
+          },
+          "text": "\"The honest one.\" Vashti closes the ledger — actually closes it. \"You could have lied to me and it would have been easier for you. I noticed. People think I only count money.\"",
+          "choices": [
+            {
+              "text": "Ask what the mark on the seal means",
+              "next_node": "v_mark"
+            },
+            {
+              "text": "Ask about the customs officer",
+              "next_node": "v_halloran"
+            },
+            {
+              "text": "Nothing tonight",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_first",
+          "text": "The broker looks at your hands, then at the shape in your coat. \"You're carrying something you'd rather not be carrying,\" she says. \"Everyone who comes down those steps is. Sit or don't.\"",
+          "choices": [
+            {
+              "text": "Ask what she trades in",
+              "next_node": "v_wares"
+            },
+            {
+              "text": "Ask about the letter you're carrying",
+              "next_node": "v_letter"
+            },
+            {
+              "text": "Walk away",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_wares",
+          "text": "\"Names, mostly. Sometimes silk, when the silk is interesting.\" She taps the ledger. \"A name is worth more than a bolt of cloth and weighs nothing. You'd be amazed what people will pay to know who is expecting them.\"",
+          "choices": [
+            {
+              "text": "Ask about the letter you're carrying",
+              "next_node": "v_letter"
+            },
+            {
+              "text": "That's enough",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "v_letter",
+          "text": "\"Ah.\" Vashti sits back. \"A sealed letter with no address. Someone wants it delivered without a record of the delivery. That is either very dull or very dangerous, and I have never once found it dull.\" She waits. \"Whose is it?\"",
+          "choices": [
+            {
+              "text": "Tell her the truth — you don't know",
+              "next_node": "v_truth",
+              "set_var": "told_truth=yes"
+            },
+            {
+              "text": "Lie — tell her it's yours",
+              "next_node": "v_lie",
+              "set_var": "lied_to_vashti=yes"
+            },
+            {
+              "text": "Refuse to answer",
+              "next_node": "v_refuse"
+            }
+          ]
+        },
+        {
+          "node_id": "v_truth",
+          "text": "\"You don't know.\" She studies you for a long moment. \"Good. People who know tend to lie about it, and people who lie to me get nothing. There's a mark pressed into that wax — I can tell you whose it is.\" A beat. \"Not for free. I have a ledger to answer to, same as anyone.\"",
+          "choices": [
+            {
+              "text": "Ask her price",
+              "next_node": "v_price"
+            },
+            {
+              "text": "Say you'll find out yourself",
+              "next_node": "v_refuse"
+            }
+          ]
+        },
+        {
+          "node_id": "v_lie",
+          "text": "\"Yours.\" Vashti's pen stops. \"Sealed with a mark you don't recognise, addressed to nobody, and you walked it through a customs basin at night — for yourself.\" She resumes writing. \"Of course. How silly of me.\"",
+          "choices": [
+            {
+              "text": "Hold the lie",
+              "next_node": "v_lie_held"
+            },
+            {
+              "text": "Take it back",
+              "next_node": "v_truth",
+              "set_var": "told_truth=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "v_lie_held",
+          "text": "\"Then there's nothing I can tell you about your own letter,\" she says pleasantly, and does not look up again.",
+          "choices": []
+        },
+        {
+          "node_id": "v_refuse",
+          "text": "\"Suit yourself.\" She returns to her ledger. \"The officer up north will ask you the same question, and he won't take 'no' for an answer the way I do.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_price",
+          "text": "\"A purse. Not a large one — I'm not greedy, I'm thorough.\" She holds out one hand, palm up, and keeps writing with the other. \"The name, and what the mark means, and one piece of advice you'll want later.\"",
+          "choices": [
+            {
+              "text": "Pay her",
+              "next_node": "v_paid",
+              "need_item": "coin_purse",
+              "set_var": "paid_vashti=yes"
+            },
+            {
+              "text": "You have nothing to pay with",
+              "next_node": "v_broke"
+            },
+            {
+              "text": "Refuse to pay",
+              "next_node": "v_refuse"
+            }
+          ]
+        },
+        {
+          "node_id": "v_broke",
+          "text": "\"Empty pockets.\" Vashti sighs, not unkindly. \"Then go and find some. There's a child at the spice stall who has more coin than sense and a worrying urge to give it away. Come back when your pockets are heavier.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_paid",
+          "text": "The purse disappears under the table so fast you half doubt you handed it over. \"The mark is a river-guild seal — old family, the kind that doesn't put its name on paper. The letter is for collection, not delivery; someone will come to it.\" She slides a small brass key across the table. \"Back office at the customs post. The manifests in there say the same thing I just did, in writing, which is worth more than my word to some people.\"",
+          "choices": [
+            {
+              "text": "Take the key and ask for the advice",
+              "next_node": "v_advice",
+              "give_item": "brass_key"
+            }
+          ]
+        },
+        {
+          "node_id": "v_advice",
+          "text": "\"The advice.\" Vashti finally closes the ledger. \"Halloran at the post is not a bad man, and that is the problem. Give him a reason to do his duty and he will do it, to you and to anyone standing near you.\" She opens the ledger again. \"Don't hand him a name he has to act on.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_mark",
+          "text": "\"A river-guild seal. Three generations of moving things quietly and never once writing down why.\" She shrugs. \"They'll collect it themselves. Your part is to get it to the water and then stop being interesting.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_halloran",
+          "text": "\"Halloran has stood under that awning for eleven years and stamped every honest thing that passed him. He is tired and he is fair and he has no imagination whatsoever.\" She turns a page. \"Tell him the truth and he'll help you. Tell him a crime and he'll pursue it.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_pip",
+          "text": "\"Pip.\" For the first time her voice loses its edge. \"Lifts purses, gives them away again within the hour, sleeps behind the spice sacks. I've told that child to leave this basin a dozen times.\" A pause. \"If you put Halloran onto them I will know about it before you've walked back here.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_betrayed_push",
+          "text": "\"No.\" Vashti says it quietly and that is worse. \"You weighed a child against a letter and the letter won. I'm not angry. I'm simply finished with you.\"",
+          "choices": []
+        },
+        {
+          "node_id": "v_lied_confess",
+          "text": "\"I know you lied. I knew when you said it.\" She waves a hand. \"The confession is for you, not me. It changes nothing I'm willing to sell you tonight.\"",
+          "choices": []
+        }
+      ]
+    },
+    "pip": {
+      "name": "Pip",
+      "description": "A thin child of about eleven, dressed in too many coats. Their hands never stop moving.",
+      "aliases": [
+        "pip",
+        "child",
+        "kid"
+      ],
+      "room": "spice_stall",
+      "dialogue": [
+        {
+          "node_id": "p_after_gift",
+          "conditions": {
+            "pip_gave_purse": "yes"
+          },
+          "text": "Pip brightens. \"Oh, it's you. Did you spend it? You should spend it, that's the whole point of it.\" They go back to watching the crowd. \"There's always more.\"",
+          "choices": [
+            {
+              "text": "Ask why they give it all away",
+              "next_node": "p_why"
+            },
+            {
+              "text": "Warn them about the customs officer",
+              "next_node": "p_warn",
+              "set_var": "warned_pip=yes"
+            },
+            {
+              "text": "Leave them be",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "p_first",
+          "text": "The child's eyes go to your coat, then away, with the practised disinterest of someone who has already decided what you're carrying. \"Not buying,\" they say. \"Nothing here's mine to sell.\"",
+          "choices": [
+            {
+              "text": "Ask what they're doing here",
+              "next_node": "p_doing"
+            },
+            {
+              "text": "Ask about the broker in the market",
+              "next_node": "p_vashti"
+            },
+            {
+              "text": "Say nothing and watch them work",
+              "next_node": "p_watch",
+              "set_var": "saw_pip_steal=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "p_doing",
+          "text": "\"Working.\" Pip nods at the crowd. \"Most of them are carrying more than they'll miss. That's not an excuse, before you say it. I know what it is.\"",
+          "choices": [
+            {
+              "text": "Ask if they'd help you",
+              "next_node": "p_help"
+            },
+            {
+              "text": "Watch them work",
+              "next_node": "p_watch",
+              "set_var": "saw_pip_steal=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "p_watch",
+          "text": "You wait. A man in a good coat stops to argue about the price of pepper, and Pip is past him and back on the crate before he's finished his sentence. A purse sits in their lap. They look at you, entirely unbothered, and shrug. \"You watched. That makes you a witness, I suppose.\"",
+          "choices": [
+            {
+              "text": "Ask them to hand it over",
+              "next_node": "p_hand_over"
+            },
+            {
+              "text": "Say you saw nothing",
+              "next_node": "p_nothing"
+            }
+          ]
+        },
+        {
+          "node_id": "p_hand_over",
+          "text": "\"Take it, then.\" Pip tosses the purse to you underarm, without a flicker of regret. \"I'd only have given it to the woman with the burnt hands by the bridge. You can do that instead, or you can keep it. I'm not your conscience.\"",
+          "choices": [
+            {
+              "text": "Take the purse",
+              "next_node": "p_why",
+              "give_item": "coin_purse",
+              "set_var": "pip_gave_purse=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "p_nothing",
+          "text": "\"Mm.\" Pip weighs the purse in one hand. \"Then I'll see you around, witness.\"",
+          "choices": []
+        },
+        {
+          "node_id": "p_help",
+          "text": "Pip considers you properly for the first time. \"Depends what with. I don't go near the customs post and I don't carry sealed things. Those are the only two rules I've got and they've kept me out of a cell.\"",
+          "choices": [
+            {
+              "text": "Watch them work instead",
+              "next_node": "p_watch",
+              "set_var": "saw_pip_steal=yes"
+            },
+            {
+              "text": "Respect the rules and leave",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "p_vashti",
+          "text": "\"Vashti?\" Pip grins. \"She tells me to leave the basin about twice a week. She's been telling me that for two years and she's never once told anyone else where I sleep.\"",
+          "choices": [
+            {
+              "text": "Watch them work",
+              "next_node": "p_watch",
+              "set_var": "saw_pip_steal=yes"
+            },
+            {
+              "text": "Leave them be",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "p_why",
+          "text": "\"Because having it is the boring part.\" Pip says it like it's obvious. \"Getting it is the good bit, and giving it away means I get to do the good bit again tomorrow.\"",
+          "choices": []
+        },
+        {
+          "node_id": "p_warn",
+          "text": "Pip goes still for a second — the first time you've seen their hands stop. \"...Right. Thanks.\" They slide off the crate and vanish behind the spice sacks without another word.",
+          "choices": []
+        }
+      ]
+    },
+    "halloran": {
+      "name": "Halloran",
+      "description": "A customs officer near the end of his shift, with eleven years of stamping honest cargo in his shoulders.",
+      "aliases": [
+        "halloran",
+        "officer",
+        "customs officer",
+        "guard"
+      ],
+      "room": "customs_post",
+      "dialogue": [
+        {
+          "node_id": "h_after_pass",
+          "conditions": {
+            "got_pass": "yes"
+          },
+          "text": "Halloran glances at you and then at the chain. \"You've got your pass. Steps are down there. I'd rather not watch, if it's the same to you.\"",
+          "choices": [
+            {
+              "text": "Thank him",
+              "next_node": "h_thanks"
+            },
+            {
+              "text": "Say nothing",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "h_after_betrayal",
+          "conditions": {
+            "betrayed_pip": "yes"
+          },
+          "text": "\"Picked the child up twenty minutes ago.\" Halloran doesn't sound pleased about it. \"Eleven years old and they went quiet as anything. You did the lawful thing and I did the lawful thing and I've felt better about other nights.\" He stamps something. \"Your pass is in order. Go on.\"",
+          "choices": [
+            {
+              "text": "Ask what happens to Pip now",
+              "next_node": "h_pip_fate"
+            },
+            {
+              "text": "Go to the boat",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "h_first",
+          "text": "The officer straightens up with the weariness of a man who has been upright too long. \"Evening. Anything to declare, or are you going to tell me you're just walking?\" He says it without hostility — he has heard every answer there is.",
+          "choices": [
+            {
+              "text": "Declare the sealed letter honestly",
+              "next_node": "h_declare",
+              "set_var": "declared_letter=yes"
+            },
+            {
+              "text": "Ask what he's looking for",
+              "next_node": "h_looking"
+            },
+            {
+              "text": "Report the pickpocket at the spice stall",
+              "next_node": "h_report",
+              "need_var": "saw_pip_steal=yes"
+            },
+            {
+              "text": "Say you're just walking",
+              "next_node": "h_walking"
+            }
+          ]
+        },
+        {
+          "node_id": "h_looking",
+          "text": "\"Unstamped cargo, mostly. Sealed correspondence, officially.\" He gestures at the notice down on the quay with his thumb. \"Between you and me, a sealed letter is the least of what moves through this basin after dark. But it's what's written down, so it's what I ask about.\"",
+          "choices": [
+            {
+              "text": "Declare the letter",
+              "next_node": "h_declare",
+              "set_var": "declared_letter=yes"
+            },
+            {
+              "text": "Report the pickpocket at the spice stall",
+              "next_node": "h_report",
+              "need_var": "saw_pip_steal=yes"
+            },
+            {
+              "text": "Keep it to yourself",
+              "next_node": "h_walking"
+            }
+          ]
+        },
+        {
+          "node_id": "h_declare",
+          "text": "\"Well.\" Halloran takes a moment to recalibrate. \"That's the first honest answer I've had tonight. I can't open it — no address, no grounds — but I can log it as declared, and a declared letter is a letter that stops being my problem.\" He reaches for the press.",
+          "choices": [
+            {
+              "text": "Ask him to stamp a transit pass",
+              "next_node": "h_pass"
+            },
+            {
+              "text": "Ask about the back office",
+              "next_node": "h_office"
+            }
+          ]
+        },
+        {
+          "node_id": "h_pass",
+          "text": "The press comes down with a sound like a door closing. \"Transit pass. Stamped, signed, mine if anyone asks.\" He slides it over. \"The chain on the steps opens with it. Take the letter to the water and let whoever's collecting it collect it.\"",
+          "choices": [
+            {
+              "text": "Take the pass",
+              "next_node": "h_advice",
+              "give_item": "transit_pass",
+              "set_var": "got_pass=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "h_advice",
+          "text": "\"One thing.\" Halloran looks past you, down Market Row. \"If you've seen anything at the spice stall tonight, I'd thank you not to tell me about it. Once it's said out loud I have to act on it, and I've got forty minutes left on this shift.\"",
+          "choices": [
+            {
+              "text": "Tell him about the pickpocket anyway",
+              "next_node": "h_report",
+              "need_var": "saw_pip_steal=yes"
+            },
+            {
+              "text": "Tell him you've seen nothing",
+              "next_node": "h_nothing"
+            }
+          ]
+        },
+        {
+          "node_id": "h_nothing",
+          "text": "\"Nothing.\" He nods slowly. \"Good. Nothing is my favourite thing to hear.\" He goes back to his awning and his stamp and the last forty minutes of eleven years.",
+          "choices": []
+        },
+        {
+          "node_id": "h_report",
+          "text": "Halloran's face closes like a ledger. \"A witness statement. Right.\" He says it heavily, writing it down because he has to. \"Description, location, time. I'll have to go and collect them, you understand. There's no version of this where I've heard that and don't go.\"",
+          "choices": [
+            {
+              "text": "Confirm the statement",
+              "next_node": "h_betray",
+              "set_var": "betrayed_pip=yes"
+            },
+            {
+              "text": "Withdraw it",
+              "next_node": "h_withdraw"
+            }
+          ]
+        },
+        {
+          "node_id": "h_betray",
+          "text": "\"Then that's that.\" He tears off the page and whistles to someone inside. \"Your pass is stamped — you declared, you reported, you've done everything by the book tonight.\" He doesn't look at you as he hands it over. \"Steps are down there.\"",
+          "choices": [
+            {
+              "text": "Take the pass",
+              "next_node": "h_pip_fate",
+              "give_item": "transit_pass",
+              "set_var": "got_pass=yes"
+            }
+          ]
+        },
+        {
+          "node_id": "h_withdraw",
+          "text": "Halloran stops writing. For a moment he just breathes out. \"Withdrawn. Nothing said, nothing heard.\" He crumples the page into his coat pocket. \"Thank you.\"",
+          "choices": [
+            {
+              "text": "Ask him to stamp a transit pass",
+              "next_node": "h_pass"
+            },
+            {
+              "text": "Leave him to his shift",
+              "next_node": ""
+            }
+          ]
+        },
+        {
+          "node_id": "h_office",
+          "text": "\"Back office?\" He frowns. \"Manifests and damp. It's locked, and I'm not the one who holds that key — that's the harbour clerk's, and the harbour clerk sells things she shouldn't.\" He shrugs. \"If you come by a key honestly, I don't much care what you read.\"",
+          "choices": []
+        },
+        {
+          "node_id": "h_walking",
+          "text": "\"Just walking.\" Halloran nods, entirely unsurprised. \"Then walk. The chain stays shut without a pass, and I can't stamp a pass for a man who isn't carrying anything.\"",
+          "choices": []
+        },
+        {
+          "node_id": "h_thanks",
+          "text": "\"Don't thank me, I stamped a form.\" He almost smiles. \"Safe water.\"",
+          "choices": []
+        },
+        {
+          "node_id": "h_pip_fate",
+          "text": "\"Magistrate in the morning. First offence on paper, whatever the truth of it.\" He stamps the next form in the pile. \"They'll be out by winter. I'd rather have spent the night stamping silk.\"",
+          "choices": []
+        }
+      ]
+    }
+  },
+  "puzzles": [
+    {
+      "id": "office_lock",
+      "type": "key_lock",
+      "name": "The back office",
+      "description": "The back office door is locked. Someone in this market sells keys they shouldn't.",
+      "room": "customs_post",
+      "key_item": "brass_key",
+      "lock_target": "office_door",
+      "lock_verb": "use",
+      "unlock_direction": "east",
+      "unlock_room": "locked_office",
+      "lock_fail_text": "The brass lock doesn't give. You'd need the key the harbour clerk is supposed to be holding.",
+      "completion_text": "The brass key turns easily — too easily, like it has done this often. The office door swings inward onto the smell of damp paper."
+    },
+    {
+      "id": "read_manifest",
+      "type": "examine_learn",
+      "name": "The circled name",
+      "description": "Vashti's ledger has one name written out in full. The customs manifests might say why.",
+      "room": "market_row",
+      "source_item": "manifest",
+      "source_learn_text": "You find the entry marked FOR COLLECTION. The name beside it is the same one circled twice in Vashti's ledger — a river-guild family that has never, in three generations, put its name on anything.",
+      "target_item": "ledger",
+      "target_verb": "read",
+      "target_success_text": "You turn Vashti's ledger to the circled name and set the manifest beside it. The hand is the same. She wasn't selling you a rumour — she was selling you something she had already checked.",
+      "target_fail_text": "The name means nothing to you yet. Something in writing might explain it.",
+      "completion_text": ""
+    },
+    {
+      "id": "mooring_chain",
+      "type": "key_lock",
+      "name": "The mooring chain",
+      "description": "A customs padlock holds the chain across the steps. Only a stamped transit pass will open it.",
+      "room": "customs_post",
+      "key_item": "transit_pass",
+      "lock_target": "boat_chain",
+      "lock_verb": "use",
+      "unlock_direction": "down",
+      "unlock_room": "canal_boat",
+      "lock_fail_text": "The customs padlock holds. Nothing opens this but a stamped pass, and the man who stamps them is standing right there.",
+      "completion_text": "You hold the stamped pass against the padlock and it gives on the second try. The chain swings aside, and the steps down to the moorings open in front of you."
+    },
+    {
+      "id": "deliver_letter",
+      "type": "win_condition",
+      "name": "The letter",
+      "description": "The letter is under the bench on the canal boat. Take it, and the night is over.",
+      "room": "canal_boat",
+      "win_item": "sealed_letter",
+      "win_verb": "take",
+      "endings": [
+        {
+          "id": "betrayer",
+          "title": "By the Book",
+          "conditions": {
+            "betrayed_pip": "yes"
+          },
+          "text": "You lift the letter from under the bench. The wax is unbroken; the mark means nothing to you and never will.\n\nYou declared what you were told to declare and reported what you were told to report, and every page of tonight is in order. Somewhere behind you a child is sitting very quietly in a cell, waiting for a magistrate, because you answered a question honestly.\n\nThe letter goes to the water. Someone collects it. Nobody ever tells you what was in it.\n\nYou did nothing wrong. You will think about Pip for years."
+        },
+        {
+          "id": "informed",
+          "title": "The Name on the Wax",
+          "conditions": {
+            "read_manifest_solved": "true"
+          },
+          "text": "You lift the letter from under the bench, and this time the mark in the wax means something — a river-guild seal, three generations deep, matched in a broker's ledger and a customs manifest by your own hand.\n\nYou know who is coming for it. You know they will not sign for it. And you know, because Vashti told you and the paperwork agreed, that your part was only ever to carry it to the water and then stop being interesting.\n\nYou set it on the bench where it will be found, and you go. Of everyone in the basin tonight, you are the only one who understood what they were carrying."
+        },
+        {
+          "id": "bought",
+          "title": "Paid in Full",
+          "conditions": {
+            "paid_vashti": "yes"
+          },
+          "text": "You lift the letter from under the bench, and the whole night resolves into a column of sums: a purse you were given, a name you bought, a key that turned too easily, a pass stamped by a man who wanted his shift to end.\n\nEverything you needed tonight, you paid for with something that wasn't yours. It worked. It was always going to work — that is what Vashti sells, and she is very good at her trade.\n\nThe letter goes to the water. The ledger closes. You are, as of tonight, an entry in it."
+        },
+        {
+          "id": "honest",
+          "title": "The Honest Crossing",
+          "conditions": {
+            "told_truth": "yes"
+          },
+          "text": "You lift the letter from under the bench. Unbroken seal, no address, exactly as it was handed to you.\n\nYou told Vashti you didn't know whose it was, which was true and cost you nothing but your advantage. You told Halloran what you were carrying, which was true and cost you forty minutes of a tired man's patience. Nobody in this basin had to guess at you tonight.\n\nThe canal takes the boat out past the customs post. Halloran is still under his awning, stamping the last of the honest cargo.\n\nYou never find out what was in the letter. You find you don't mind."
+        },
+        {
+          "id": "quiet",
+          "title": "A Quiet Night",
+          "text": "You lift the letter from under the bench and the seal is as unbroken as when you started.\n\nYou asked little and were told little. Vashti's ledger stayed open, Pip kept their purse and their rules, Halloran stamped his form and got his shift finished. The basin is exactly as you found it.\n\nThe letter goes to the water. Someone collects it in the dark.\n\nIt was never your letter. Tonight, that was enough."
+        }
+      ]
+    }
+  ]
+}

@@ -245,13 +245,53 @@ func ValidateSpec(spec *StorySpec) []string {
 				}
 				nodeIDs[dn.NodeID] = true
 			}
+			targeted := make(map[string]bool)
 			for _, dn := range npc.Dialogue {
 				for _, cs := range dn.Choices {
 					if cs.NextNode != "" && cs.NextNode != "__exit__" {
 						if !nodeIDs[cs.NextNode] {
 							errs = append(errs, fmt.Sprintf("npc %q: dialogue choice references unknown node %q", npcID, cs.NextNode))
 						}
+						targeted[cs.NextNode] = true
 					}
+					if cs.NeedVar != "" {
+						if _, _, ok := splitKeyValue(cs.NeedVar); !ok {
+							errs = append(errs, fmt.Sprintf("npc %q: choice need_var %q must be in \"key=value\" form", npcID, cs.NeedVar))
+						}
+					}
+				}
+				for k := range dn.Conditions {
+					if strings.TrimSpace(k) == "" {
+						errs = append(errs, fmt.Sprintf("npc %q: dialogue node %q has a condition with an empty variable name", npcID, dn.NodeID))
+					}
+				}
+			}
+
+			// Entry nodes are those no choice points at. The engine picks the
+			// first whose conditions pass, so a second unconditional entry node
+			// is unreachable dead content.
+			unconditionalEntries := 0
+			for _, dn := range npc.Dialogue {
+				if !targeted[dn.NodeID] && len(dn.Conditions) == 0 && dn.Topic == "" {
+					unconditionalEntries++
+				}
+			}
+			if unconditionalEntries > 1 {
+				errs = append(errs, fmt.Sprintf(
+					"npc %q: %d entry nodes have no conditions — only the first can ever be reached; add conditions to all but one",
+					npcID, unconditionalEntries))
+			}
+			if unconditionalEntries == 0 && len(npc.Dialogue) > 0 {
+				hasEntry := false
+				for _, dn := range npc.Dialogue {
+					if !targeted[dn.NodeID] {
+						hasEntry = true
+					}
+				}
+				if hasEntry {
+					errs = append(errs, fmt.Sprintf(
+						"npc %q: every entry node is conditional — add one unconditional entry node as a fallback, or the npc may refuse to talk",
+						npcID))
 				}
 			}
 		}
