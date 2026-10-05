@@ -28,7 +28,7 @@ func NewSpecHandler(repo *services.StoryRepository, db *sql.DB, debug bool) *Spe
 // CreateFromSpec handles POST /api/v1/stories/from-spec
 func (h *SpecHandler) CreateFromSpec(w http.ResponseWriter, r *http.Request) {
 	var spec storygen.StorySpec
-	if err := DecodeJSON(r, &spec); err != nil {
+	if err := DecodeJSONStrict(r, &spec); err != nil {
 		WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}

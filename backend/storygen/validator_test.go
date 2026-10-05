@@ -635,7 +635,11 @@ func TestGameplayMissingReverseConnection(t *testing.T) {
 	assertResultContains(t, vr.Warnings, "no connection back")
 }
 
-func TestGameplayOrphanDialogueNode(t *testing.T) {
+// A second unconditional entry node is dead content. This is now reported by
+// ValidateSpec as an error (with a precise message about entry nodes) rather
+// than by the gameplay orphan walk, which can no longer distinguish it from a
+// legitimate conditional greeting.
+func TestSpecRejectsDeadEntryNode(t *testing.T) {
 	spec := minimalSpec()
 	spec.Npcs = map[string]NpcSpec{
 		"bob": {
@@ -648,8 +652,78 @@ func TestGameplayOrphanDialogueNode(t *testing.T) {
 			},
 		},
 	}
+	assertResultContains(t, ValidateSpec(spec), "entry nodes have no conditions")
+}
+
+// The orphan walk still catches nodes stranded in a cycle that no entry node
+// leads into.
+func TestGameplayOrphanDialogueCycle(t *testing.T) {
+	spec := minimalSpec()
+	spec.Npcs = map[string]NpcSpec{
+		"bob": {
+			Name: "Bob", Room: "room1",
+			Dialogue: []DialogueNodeSpec{
+				{NodeID: "greeting", Text: "Hello!", Choices: []DialogueChoiceSpec{
+					{Text: "Bye", NextNode: "__exit__"},
+				}},
+				// stranded pair: each is only reachable from the other
+				{NodeID: "limbo_a", Text: "A", Choices: []DialogueChoiceSpec{
+					{Text: "to b", NextNode: "limbo_b"},
+				}},
+				{NodeID: "limbo_b", Text: "B", Choices: []DialogueChoiceSpec{
+					{Text: "to a", NextNode: "limbo_a"},
+				}},
+			},
+		},
+	}
 	vr := ValidateGameplay(spec)
-	assertResultContains(t, vr.Warnings, "orphan")
+	assertResultContains(t, vr.Warnings, "limbo")
+}
+
+// Rooms behind non-key_lock gates, and gates whose key comes from dialogue,
+// must count as reachable.
+func TestGameplayReachabilityBeyondKeyLocks(t *testing.T) {
+	spec := &StorySpec{
+		Title: "T", Slug: "t", StartRoom: "start",
+		Rooms: map[string]RoomSpec{
+			"start":  {Name: "Start", Description: "s", Items: []string{"dial"}},
+			"middle": {Name: "Middle", Description: "m", Items: []string{"gate"}},
+			"end":    {Name: "End", Description: "e", Items: []string{"prize"}},
+		},
+		Items: map[string]ItemSpec{
+			"dial":  {Name: "Dial", Description: "d"},
+			"gate":  {Name: "Gate", Description: "g"},
+			"pass":  {Name: "Pass", Description: "p", Portable: true},
+			"prize": {Name: "Prize", Description: "p", Portable: true},
+		},
+		Npcs: map[string]NpcSpec{
+			// The pass is never placed in a room — only handed over here.
+			"guard": {Name: "Guard", Room: "middle", Dialogue: []DialogueNodeSpec{
+				{NodeID: "g0", Text: "Here.", Choices: []DialogueChoiceSpec{
+					{Text: "Take the pass", NextNode: "__exit__", GiveItem: "pass"},
+				}},
+			}},
+		},
+		Puzzles: []PuzzleSpec{
+			// combination_lock gate: start -> middle (not a key_lock)
+			{ID: "dial_lock", Type: "combination_lock", Name: "Dial", Room: "start",
+				CombinationTarget: "dial", CombinationSteps: 2,
+				UnlockDirection: "north", UnlockRoom: "middle"},
+			// key_lock whose key is a dialogue reward: middle -> end
+			{ID: "gate_lock", Type: "key_lock", Name: "Gate", Room: "middle",
+				KeyItem: "pass", LockTarget: "gate",
+				UnlockDirection: "north", UnlockRoom: "end"},
+			{ID: "win", Type: "win_condition", Name: "Win", Room: "end",
+				WinItem: "prize", WinVerb: "take", WinText: "done"},
+		},
+	}
+
+	reached := reachableRooms(spec)
+	for _, r := range []string{"start", "middle", "end"} {
+		if !reached[r] {
+			t.Errorf("room %q should be reachable; reached=%v", r, reached)
+		}
+	}
 }
 
 func TestGameplaySimpleTopicWarning(t *testing.T) {
@@ -878,4 +952,35 @@ func TestGameplayNoWarningsOnCleanSpec(t *testing.T) {
 	if len(vr.Warnings) > 0 {
 		t.Errorf("expected no warnings, got: %v", vr.Warnings)
 	}
+}
+
+// The reachability fixpoint must still reject a gate whose key cannot be
+// obtained at all — not placed, not gifted, not craftable.
+func TestGameplayUnobtainableKeyStillUnreachable(t *testing.T) {
+	spec := &StorySpec{
+		Title: "T", Slug: "t", StartRoom: "start",
+		Rooms: map[string]RoomSpec{
+			"start": {Name: "Start", Description: "s", Items: []string{"gate"}},
+			"end":   {Name: "End", Description: "e", Items: []string{"prize"}},
+		},
+		Items: map[string]ItemSpec{
+			"gate":  {Name: "Gate", Description: "g"},
+			"ghost": {Name: "Ghost Key", Description: "nowhere to be found", Portable: true},
+			"prize": {Name: "Prize", Description: "p", Portable: true},
+		},
+		Puzzles: []PuzzleSpec{
+			{ID: "gate_lock", Type: "key_lock", Name: "Gate", Room: "start",
+				KeyItem: "ghost", LockTarget: "gate",
+				UnlockDirection: "north", UnlockRoom: "end"},
+			{ID: "win", Type: "win_condition", Name: "Win", Room: "end",
+				WinItem: "prize", WinVerb: "take", WinText: "done"},
+		},
+	}
+
+	reached := reachableRooms(spec)
+	if reached["end"] {
+		t.Error(`"end" is behind a key that exists nowhere; it must not be reachable`)
+	}
+	vr := ValidateGameplay(spec)
+	assertResultContains(t, vr.Errors, "not reachable")
 }

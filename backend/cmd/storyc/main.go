@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,8 +43,12 @@ func compileStory(path string) bool {
 		return false
 	}
 
+	// Strict: an unrecognised field is a typo or a format mismatch, and silently
+	// dropping it yields a story that validates clean and behaves wrongly.
 	var spec storygen.StorySpec
-	if err := json.Unmarshal(data, &spec); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&spec); err != nil {
 		printError("invalid JSON: %v", err)
 		return false
 	}

@@ -345,27 +345,108 @@ func ValidateGameplay(spec *StorySpec) *ValidationResult {
 // reachableRooms returns the set of rooms reachable from start via connections,
 // treating rooms behind key_lock puzzles as locked unless their key is reachable.
 // It iteratively unlocks doors as keys become reachable.
-func reachableRooms(spec *StorySpec) map[string]bool {
-	// Build the set of locked connections: room+direction → puzzle
-	type lockedDoor struct {
-		puzzleID  string
-		keyItem   string
-		fromRoom  string
-		direction string
-		toRoom    string
-	}
+// puzzleGate models a connection a puzzle unlocks, plus the portable items the
+// player must obtain to solve it.
+type puzzleGate struct {
+	puzzleID      string
+	fromRoom      string
+	direction     string
+	toRoom        string
+	requiredItems []string
+}
 
-	var locks []lockedDoor
+// puzzleGates extracts the gating model for every puzzle type that can unlock a
+// connection. Modelling only key_lock (as this used to) reports every room
+// behind an examine_learn / combination_lock / counter_puzzle / timed_challenge
+// gate as unreachable — which was false for three of the shipped stories.
+func puzzleGates(spec *StorySpec) []puzzleGate {
+	var gates []puzzleGate
+	for i := range spec.Puzzles {
+		ps := &spec.Puzzles[i]
+		if ps.UnlockDirection == "" || ps.UnlockRoom == "" {
+			continue
+		}
+
+		from := ps.Room
+		var req []string
+		switch ps.Type {
+		case "key_lock":
+			req = []string{ps.KeyItem}
+		case "examine_learn":
+			req = []string{ps.SourceItem, ps.TargetItem}
+		case "fetch_quest":
+			from = or(ps.FetchRoom, ps.Room)
+			req = []string{ps.FetchItem, ps.FetchTarget}
+		case "timed_challenge":
+			from = or(ps.FetchRoom, ps.Room)
+			req = []string{ps.TriggerItem, ps.FetchItem}
+		case "combination_lock":
+			req = []string{ps.CombinationTarget}
+		case "counter_puzzle":
+			req = append([]string{}, ps.CounterItems...)
+		default:
+			continue
+		}
+		if from == "" {
+			continue
+		}
+		gates = append(gates, puzzleGate{ps.ID, from, ps.UnlockDirection, ps.UnlockRoom, req})
+	}
+	return gates
+}
+
+// dialogueGiftRooms maps an item to the rooms where an NPC will hand it over
+// via a `give_item` choice. An item obtained this way is never placed in a
+// room, so treating room placement as the only source made any puzzle keyed on
+// a dialogue reward look unsolvable.
+func dialogueGiftRooms(spec *StorySpec) map[string][]string {
+	gifts := make(map[string][]string)
+	for _, npc := range spec.Npcs {
+		if npc.Room == "" {
+			continue
+		}
+		for _, dn := range npc.Dialogue {
+			for _, cs := range dn.Choices {
+				if cs.GiveItem != "" {
+					gifts[cs.GiveItem] = append(gifts[cs.GiveItem], npc.Room)
+				}
+			}
+		}
+	}
+	return gifts
+}
+
+func reachableRooms(spec *StorySpec) map[string]bool {
+	reached, _ := reachableRoomsAndItems(spec)
+	return reached
+}
+
+// reachableRoomsAndItems runs a fixpoint over two sets at once: rooms the
+// player can stand in, and portable items they can be holding. The two depend
+// on each other — an item behind a locked door needs the door, and the door
+// needs its key — so both grow together until nothing changes.
+func reachableRoomsAndItems(spec *StorySpec) (map[string]bool, map[string]bool) {
+	locks := puzzleGates(spec)
+	gifts := dialogueGiftRooms(spec)
+
+	// item_combine turns inputs the player holds into a new item.
+	type combine struct {
+		inputs []string
+		result string
+	}
+	var combines []combine
 	for _, ps := range spec.Puzzles {
-		if ps.Type == "key_lock" && ps.Room != "" && ps.UnlockRoom != "" {
-			locks = append(locks, lockedDoor{
-				puzzleID:  ps.ID,
-				keyItem:   ps.KeyItem,
-				fromRoom:  ps.Room,
-				direction: ps.UnlockDirection,
-				toRoom:    ps.UnlockRoom,
+		if ps.Type == "item_combine" && ps.CombineResult != "" {
+			combines = append(combines, combine{
+				inputs: []string{ps.CombineItemA, ps.CombineItemB},
+				result: ps.CombineResult,
 			})
 		}
+	}
+
+	portable := func(itemID string) bool {
+		it, ok := spec.Items[itemID]
+		return ok && it.Portable
 	}
 
 	// key_lock puzzles define a locked connection from fromRoom→toRoom.
@@ -391,8 +472,10 @@ func reachableRooms(spec *StorySpec) map[string]bool {
 	// We'll track which locked connections have been unlocked
 	unlocked := make(map[string]map[string]bool) // roomID → direction → unlocked?
 
-	// Iterative BFS: reach rooms, unlock doors when key is reachable, repeat
+	// Iterative BFS: reach rooms, unlock doors when their requirements are
+	// satisfiable, repeat.
 	reached := make(map[string]bool)
+	items := make(map[string]bool)
 	changed := true
 	for changed {
 		changed = false
@@ -434,14 +517,65 @@ func reachableRooms(spec *StorySpec) map[string]bool {
 			}
 		}
 
-		// Check if we can unlock any new doors
+		// Collect every portable item obtainable from the rooms reached so far:
+		// placed in one, handed over by an NPC standing in one, or crafted from
+		// items already obtainable.
+		for itemID, roomID := range itemRoom {
+			if visited[roomID] && portable(itemID) && !items[itemID] {
+				items[itemID] = true
+				changed = true
+			}
+		}
+		for itemID, rooms := range gifts {
+			if items[itemID] {
+				continue
+			}
+			for _, roomID := range rooms {
+				if visited[roomID] {
+					items[itemID] = true
+					changed = true
+					break
+				}
+			}
+		}
+		for _, c := range combines {
+			if items[c.result] {
+				continue
+			}
+			ok := true
+			for _, in := range c.inputs {
+				if in != "" && portable(in) && !items[in] {
+					ok = false
+				}
+			}
+			if ok {
+				items[c.result] = true
+				changed = true
+			}
+		}
+
+		// Unlock any door whose room is reachable and whose required portable
+		// items are all obtainable. Non-portable requirements (doors, dials,
+		// altars) are scenery in the lock's own room, so reaching the room is
+		// sufficient for them.
 		for _, l := range locks {
 			if unlocked[l.fromRoom] != nil && unlocked[l.fromRoom][l.direction] {
 				continue // already unlocked
 			}
-			keyRoom, keyPlaced := itemRoom[l.keyItem]
-			if keyPlaced && visited[keyRoom] && visited[l.fromRoom] {
-				// Key is reachable AND the room with the lock is reachable → unlock
+			if !visited[l.fromRoom] {
+				continue
+			}
+			satisfied := true
+			for _, need := range l.requiredItems {
+				if need == "" || !portable(need) {
+					continue
+				}
+				if !items[need] {
+					satisfied = false
+					break
+				}
+			}
+			if satisfied {
 				if unlocked[l.fromRoom] == nil {
 					unlocked[l.fromRoom] = make(map[string]bool)
 				}
@@ -459,7 +593,7 @@ func reachableRooms(spec *StorySpec) map[string]bool {
 		}
 	}
 
-	return reached
+	return reached, items
 }
 
 func checkRoomReachability(spec *StorySpec, vr *ValidationResult) {
@@ -702,15 +836,31 @@ func checkOrphanDialogueNodes(spec *StorySpec, vr *ValidationResult) {
 			}
 		}
 
-		// Start from greeting nodes (NodeID containing "greeting" or first node)
-		// and any nodes with a Topic set (reachable via "ask about")
+		// Roots are entry nodes — those no choice points at — plus any node with
+		// a Topic (reachable via `ask <npc> about <topic>`). This is the same
+		// definition the expander uses to order greetings.
+		//
+		// This used to look for the substring "greeting" in the node id and fall
+		// back to Dialogue[0], which only worked for NPCs that happened to
+		// follow that naming convention and had exactly one entry node. An NPC
+		// with conditional greetings had every one of its nodes reported as an
+		// orphan, including the greeting itself.
+		targeted := make(map[string]bool)
 		for _, dn := range npc.Dialogue {
-			if dn.Topic != "" || strings.Contains(dn.NodeID, "greeting") {
+			for _, cs := range dn.Choices {
+				if cs.NextNode != "" && cs.NextNode != "__exit__" {
+					targeted[cs.NextNode] = true
+				}
+			}
+		}
+		for _, dn := range npc.Dialogue {
+			if dn.Topic != "" || !targeted[dn.NodeID] {
 				walk(dn.NodeID)
 			}
 		}
-		// Also walk from the first node (default greeting)
-		if len(npc.Dialogue) > 0 {
+		// Fully cyclic tree (every node is a choice target): fall back to the
+		// first node, which is what the engine would pick.
+		if len(reachable) == 0 && len(npc.Dialogue) > 0 {
 			walk(npc.Dialogue[0].NodeID)
 		}
 
