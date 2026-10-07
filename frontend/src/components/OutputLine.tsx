@@ -1,3 +1,4 @@
+import { CommandText } from "./CommandText";
 import type { OutputEntry } from "../types/game";
 import { useTypewriter } from "../hooks/useTypewriter";
 
@@ -32,7 +33,7 @@ export function OutputLine({ entry, isLatest, onComplete }: OutputLineProps) {
       className={`${colorClass} whitespace-pre-wrap leading-relaxed`}
       onClick={shouldAnimate && !isComplete ? skip : undefined}
     >
-      {text}
+      <CommandText text={text} context={entry.context} command={entry.type === "command"} />
     </div>
   );
 }

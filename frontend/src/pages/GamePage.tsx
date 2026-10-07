@@ -46,6 +46,7 @@ export function GamePage() {
       <div className="flex-1">
         <Terminal
           output={game.output}
+          commandContext={game.commandContext}
           onCommand={game.sendCommand}
           onNavigateHistory={game.navigateHistory}
           isLoading={game.isLoading}

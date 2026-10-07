@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import type { ItemInfo, OutputEntry } from "../types/game";
+import type { CommandContext, ItemInfo, OutputEntry } from "../types/game";
 import { gameApi } from "../lib/api-client";
 
 export function useGame() {
@@ -14,6 +14,7 @@ export function useGame() {
   });
   const [output, setOutput] = useState<OutputEntry[]>([]);
   const [inventory, setInventory] = useState<ItemInfo[]>([]);
+  const [commandContext, setCommandContext] = useState<CommandContext>();
   const [roomName, setRoomName] = useState("");
   const [turnNumber, setTurnNumber] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -41,6 +42,7 @@ export function useGame() {
         localStorage.setItem("temple_game_id", resp.id);
         localStorage.setItem("temple_story_id", storyId);
         localStorage.setItem("temple_story_name", name);
+        setCommandContext(resp.command_context);
         setRoomName(resp.room_name);
         setTurnNumber(resp.turn_number);
         setInventory(resp.inventory || []);
@@ -53,7 +55,7 @@ export function useGame() {
             type: "system",
             text: `=== ${name.toUpperCase()} ===\n`,
           },
-          { type: "narrative", text: resp.description },
+          { type: "narrative", text: resp.description, context: resp.command_context },
         ]);
       } catch (err) {
         addOutput({
@@ -72,14 +74,16 @@ export function useGame() {
     setIsLoading(true);
     try {
       const resp = await gameApi.getState(gameId);
+      setCommandContext(resp.command_context);
       setRoomName(resp.room_name);
+      gameOverRef.current = resp.status !== "active";
       setTurnNumber(resp.turn_number);
       setInventory(resp.inventory || []);
       setGameOver(resp.status !== "active");
       setGameStatus(resp.status);
       setOutput([
         { type: "system", text: "=== Game Resumed ===\n" },
-        { type: "narrative", text: resp.description },
+        { type: "narrative", text: resp.description, context: resp.command_context },
       ]);
     } catch {
       localStorage.removeItem("temple_game_id");
@@ -102,19 +106,20 @@ export function useGame() {
 
       setCommandHistory((prev) => [...prev, trimmed]);
       setHistoryIndex(-1);
-      addOutput({ type: "command", text: `> ${trimmed}` });
+      addOutput({ type: "command", text: `> ${trimmed}`, context: commandContext });
       loadingRef.current = true;
       setIsLoading(true);
 
       try {
         const resp = await gameApi.sendCommand(gameId, trimmed);
-        addOutput({ type: "narrative", text: resp.text });
+        addOutput({ type: "narrative", text: resp.text, context: resp.command_context ? { ...resp.command_context, objects: [...(commandContext?.objects || []), ...resp.command_context.objects], npcs: [...(commandContext?.npcs || []), ...resp.command_context.npcs] } : commandContext });
         if (resp.choices && resp.choices.length > 0) {
           const choiceText = resp.choices
             .map((c) => `  ${c.index}. ${c.text}`)
             .join("\n");
           addOutput({ type: "system", text: choiceText });
         }
+        setCommandContext(resp.command_context);
         setRoomName(resp.room_name);
         setTurnNumber(resp.turn_number);
         setInventory(resp.inventory || []);
@@ -142,7 +147,7 @@ export function useGame() {
         setIsLoading(false);
       }
     },
-    [gameId, addOutput]
+    [gameId, addOutput, commandContext]
   );
 
   const navigateHistory = useCallback(
@@ -177,6 +182,7 @@ export function useGame() {
     setStoryName(null);
     setOutput([]);
     setInventory([]);
+    setCommandContext(undefined);
     setRoomName("");
     setTurnNumber(0);
     loadingRef.current = false;
@@ -194,6 +200,7 @@ export function useGame() {
     storyId,
     storyName,
     output,
+    commandContext,
     inventory,
     roomName,
     turnNumber,

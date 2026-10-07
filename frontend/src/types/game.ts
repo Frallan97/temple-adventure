@@ -1,4 +1,8 @@
+export interface CommandEntity { name: string; aliases: string[] }
+export interface CommandContext { actions: string[]; objects: CommandEntity[]; npcs: CommandEntity[]; commands: string[] }
+
 export interface CreateGameResponse {
+  command_context?: CommandContext;
   id: string;
   story_id: string;
   room_name: string;
@@ -13,6 +17,7 @@ export interface ChoiceOption {
 }
 
 export interface CommandResponse {
+  command_context?: CommandContext;
   text: string;
   room_name: string;
   room_changed: boolean;
@@ -32,6 +37,7 @@ export interface ItemInfo {
 }
 
 export interface GameState {
+  command_context?: CommandContext;
   id: string;
   room_name: string;
   description: string;
@@ -41,6 +47,7 @@ export interface GameState {
 }
 
 export interface OutputEntry {
+  context?: CommandContext;
   type: "command" | "narrative" | "system" | "error";
   text: string;
 }

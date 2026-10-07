@@ -1,11 +1,12 @@
 import { useRef, useEffect } from "react";
-import type { OutputEntry } from "../types/game";
+import type { CommandContext, OutputEntry } from "../types/game";
 import { OutputLine } from "./OutputLine";
 import { CommandInput } from "./CommandInput";
 import { PixelButton } from "./PixelButton";
 
 interface TerminalProps {
   output: OutputEntry[];
+  commandContext?: CommandContext;
   onCommand: (input: string) => void;
   onNavigateHistory: (direction: "up" | "down") => string;
   isLoading: boolean;
@@ -17,6 +18,7 @@ interface TerminalProps {
 
 export function Terminal({
   output,
+  commandContext,
   onCommand,
   onNavigateHistory,
   isLoading,
@@ -79,6 +81,7 @@ export function Terminal({
 
       <div className="px-3 sm:px-5 pb-[env(safe-area-inset-bottom,8px)] pt-2">
         <CommandInput
+          context={commandContext}
           onSubmit={onCommand}
           onNavigateHistory={onNavigateHistory}
           disabled={isLoading || gameOver}

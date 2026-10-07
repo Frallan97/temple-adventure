@@ -1,6 +1,7 @@
 package models
 
 import (
+	"temple-adventure/engine"
 	"time"
 
 	"github.com/google/uuid"
@@ -51,25 +52,27 @@ type CommandRequest struct {
 }
 
 type CreateGameResponse struct {
-	ID          uuid.UUID          `json:"id"`
-	StoryID     uuid.UUID          `json:"story_id"`
-	RoomName    string             `json:"room_name"`
-	Description string             `json:"description"`
-	TurnNumber  int                `json:"turn_number"`
-	Inventory   []ItemInfoResponse `json:"inventory"`
+	CommandContext engine.CommandContext `json:"command_context"`
+	ID             uuid.UUID             `json:"id"`
+	StoryID        uuid.UUID             `json:"story_id"`
+	RoomName       string                `json:"room_name"`
+	Description    string                `json:"description"`
+	TurnNumber     int                   `json:"turn_number"`
+	Inventory      []ItemInfoResponse    `json:"inventory"`
 }
 
 type CommandResponse struct {
-	Text        string             `json:"text"`
-	RoomName    string             `json:"room_name"`
-	RoomChanged bool               `json:"room_changed"`
-	TurnNumber  int                `json:"turn_number"`
-	GameOver    bool               `json:"game_over"`
-	GameStatus  string             `json:"game_status"`
-	Inventory   []ItemInfoResponse `json:"inventory"`
-	Choices     []ChoiceResponse   `json:"choices,omitempty"`
-	EndingID    string             `json:"ending_id,omitempty"`
-	EndingTitle string             `json:"ending_title,omitempty"`
+	CommandContext engine.CommandContext `json:"command_context"`
+	Text           string                `json:"text"`
+	RoomName       string                `json:"room_name"`
+	RoomChanged    bool                  `json:"room_changed"`
+	TurnNumber     int                   `json:"turn_number"`
+	GameOver       bool                  `json:"game_over"`
+	GameStatus     string                `json:"game_status"`
+	Inventory      []ItemInfoResponse    `json:"inventory"`
+	Choices        []ChoiceResponse      `json:"choices,omitempty"`
+	EndingID       string                `json:"ending_id,omitempty"`
+	EndingTitle    string                `json:"ending_title,omitempty"`
 }
 
 type ChoiceResponse struct {
@@ -78,12 +81,13 @@ type ChoiceResponse struct {
 }
 
 type GameStateResponse struct {
-	ID          uuid.UUID          `json:"id"`
-	RoomName    string             `json:"room_name"`
-	Description string             `json:"description"`
-	TurnNumber  int                `json:"turn_number"`
-	Status      string             `json:"status"`
-	Inventory   []ItemInfoResponse `json:"inventory"`
+	CommandContext engine.CommandContext `json:"command_context"`
+	ID             uuid.UUID             `json:"id"`
+	RoomName       string                `json:"room_name"`
+	Description    string                `json:"description"`
+	TurnNumber     int                   `json:"turn_number"`
+	Status         string                `json:"status"`
+	Inventory      []ItemInfoResponse    `json:"inventory"`
 }
 
 type HistoryResponse struct {

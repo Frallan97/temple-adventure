@@ -13,9 +13,9 @@ import (
 )
 
 type GameService struct {
-	db         *sql.DB
-	storyRepo  *StoryRepository
-	cache      *engine.EngineCache
+	db        *sql.DB
+	storyRepo *StoryRepository
+	cache     *engine.EngineCache
 	// fallbackEngine is used for sessions without a story_id (legacy)
 	fallbackEngine *engine.Engine
 }
@@ -81,12 +81,13 @@ func (s *GameService) CreateGame(ctx context.Context, storyID uuid.UUID) (*model
 	roomName := eng.World.Rooms[state.CurrentRoom].Name
 
 	return &models.CreateGameResponse{
-		ID:          session.ID,
-		StoryID:     storyID,
-		RoomName:    roomName,
-		Description: roomDesc,
-		TurnNumber:  session.TurnNumber,
-		Inventory:   []models.ItemInfoResponse{},
+		CommandContext: eng.GetCommandContext(state),
+		ID:             session.ID,
+		StoryID:        storyID,
+		RoomName:       roomName,
+		Description:    roomDesc,
+		TurnNumber:     session.TurnNumber,
+		Inventory:      []models.ItemInfoResponse{},
 	}, nil
 }
 
@@ -143,16 +144,17 @@ func (s *GameService) ProcessCommand(ctx context.Context, sessionID uuid.UUID, i
 	}
 
 	return &models.CommandResponse{
-		Text:        result.Text,
-		RoomName:    roomName,
-		RoomChanged: result.RoomChanged,
-		TurnNumber:  result.TurnNumber,
-		GameOver:    result.GameOver,
-		GameStatus:  result.GameStatus,
-		Inventory:   toItemInfoResponses(inventory),
-		Choices:     choices,
-		EndingID:    result.EndingID,
-		EndingTitle: result.EndingTitle,
+		CommandContext: eng.GetCommandContext(state),
+		Text:           result.Text,
+		RoomName:       roomName,
+		RoomChanged:    result.RoomChanged,
+		TurnNumber:     result.TurnNumber,
+		GameOver:       result.GameOver,
+		GameStatus:     result.GameStatus,
+		Inventory:      toItemInfoResponses(inventory),
+		Choices:        choices,
+		EndingID:       result.EndingID,
+		EndingTitle:    result.EndingTitle,
 	}, nil
 }
 
@@ -167,12 +169,13 @@ func (s *GameService) GetGameState(ctx context.Context, sessionID uuid.UUID) (*m
 	inventory := eng.GetInventory(state)
 
 	return &models.GameStateResponse{
-		ID:          sessionID,
-		RoomName:    roomName,
-		Description: roomDesc,
-		TurnNumber:  state.TurnNumber,
-		Status:      state.Status,
-		Inventory:   toItemInfoResponses(inventory),
+		CommandContext: eng.GetCommandContext(state),
+		ID:             sessionID,
+		RoomName:       roomName,
+		Description:    roomDesc,
+		TurnNumber:     state.TurnNumber,
+		Status:         state.Status,
+		Inventory:      toItemInfoResponses(inventory),
 	}, nil
 }
 
