@@ -51,6 +51,8 @@ export function GamePage() {
           isLoading={game.isLoading}
           gameOver={game.gameOver}
           onMainMenu={handleMainMenu}
+          inventoryOpen={showInventory}
+          onToggleInventory={() => setShowInventory(!showInventory)}
         />
       </div>
       <InventoryPanel
