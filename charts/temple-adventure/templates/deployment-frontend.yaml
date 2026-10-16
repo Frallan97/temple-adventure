@@ -19,6 +19,16 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      # Keep the replicas on separate nodes so draining one node rolls the frontend
+      # instead of blacking it out. ScheduleAnyway, not a hard anti-affinity, so a pod is
+      # still placeable when only one node is schedulable.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
@@ -40,3 +50,17 @@ spec:
             periodSeconds: 5
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+---
+# maxUnavailable rather than minAvailable: at 2 replicas `minAvailable: 2` would report
+# disruptionsAllowed=0 and block a node drain forever instead of rolling one pod at a time.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "temple-adventure.fullname" . }}-frontend
+  labels:
+    {{- include "temple-adventure.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: frontend

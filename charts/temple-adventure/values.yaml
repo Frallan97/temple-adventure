@@ -2,6 +2,18 @@ imagePullSecrets:
   - name: ghcr-pull-secret
 
 backend:
+  # DELIBERATELY 1. Do not raise this without fixing the engine cache first.
+  #
+  # engine.EngineCache holds compiled story engines in a process-local map, and
+  # StoryService.Invalidate() only clears the cache of the replica that served the write.
+  # The story-editing API is live (PUT /stories/{id}, /publish, /rooms/{roomId}, ...), so
+  # with 2 replicas an edit would leave the other replica serving the old compiled story
+  # until it happens to restart - a silent correctness bug, not a performance one.
+  #
+  # Game state itself is safe to share: sessions and command_history live in Postgres, and
+  # golang-migrate takes a Postgres advisory lock, so concurrent startup migrations are fine.
+  # The cache is the only blocker. Fix it with a cross-replica invalidation (version column
+  # checked per request, or Redis pub/sub) and this can go to 2 with a PDB like the frontend.
   replicaCount: 1
   image:
     repository: ghcr.io/frallan97/temple-adventure-backend
@@ -19,7 +31,10 @@ backend:
       memory: 256Mi
 
 frontend:
-  replicaCount: 1
+  # Static assets behind nginx - no shared state, safe to run several. Two replicas plus the
+  # PDB and spread rule in the template mean a node drain rolls the site instead of taking
+  # it down.
+  replicaCount: 2
   image:
     repository: ghcr.io/frallan97/temple-adventure-frontend
     tag: latest
